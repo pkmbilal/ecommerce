@@ -339,6 +339,13 @@ export type Database = {
         };
         Returns: Json;
       };
+      transition_cod_order_status: {
+        Args: {
+          order_id_input: string;
+          next_status: Database["public"]["Enums"]["order_status"];
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       inventory_movement_type:
