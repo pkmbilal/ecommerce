@@ -5,18 +5,19 @@ import Link from "next/link";
 import { MotionReveal } from "@/components/storefront/motion-reveal";
 import { ProductCard } from "@/components/storefront/product-card";
 import { SiteHeader } from "@/components/storefront/site-header";
+import { getStorefrontProducts } from "@/lib/products/queries";
 import {
   brandStrip,
   categories,
   heroImages,
-  products,
   reviews,
 } from "@/lib/storefront-data";
 
-const newArrivals = products.slice(0, 4);
-const bestSellers = products.slice(2, 6);
+export default async function Home() {
+  const products = await getStorefrontProducts();
+  const newArrivals = products.slice(0, 4);
+  const bestSellers = products.slice(2, 6);
 
-export default function Home() {
   return (
     <>
       <SiteHeader />
