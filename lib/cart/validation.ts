@@ -4,6 +4,7 @@ import {
   products as fallbackProducts,
   type Product,
 } from "@/lib/storefront-data";
+import { resolveProductImageUrl } from "@/lib/media/images";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import {
   createOptionalSupabaseServiceClient,
@@ -73,12 +74,13 @@ export async function summarizeCartItems(
     }
 
     const primaryImage = product.product_images[0];
+    const fallbackImageUrl = fallbackProducts[0].imageUrl;
 
     return [
       {
         productId: product.slug,
         title: product.title_en,
-        imageUrl: primaryImage?.url ?? fallbackProducts[0].imageUrl,
+        imageUrl: resolveProductImageUrl(primaryImage?.url, fallbackImageUrl),
         imageAlt: primaryImage?.alt_en ?? product.title_en,
         unitPriceHalalas: product.price_halalas,
         quantity: item.quantity,

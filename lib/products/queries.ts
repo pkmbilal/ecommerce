@@ -8,6 +8,7 @@ import {
   type CategoryTile,
   type Product,
 } from "@/lib/storefront-data";
+import { resolveProductImageUrl } from "@/lib/media/images";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -228,7 +229,7 @@ export const getProductBySlug = cache(
       sku: row.sku ?? row.slug.toUpperCase(),
       description: row.description_en ?? undefined,
       images: row.product_images.map((image) => ({
-        url: image.url,
+        url: resolveProductImageUrl(image.url, fallbackProducts[0].imageUrl),
         alt: image.alt_en,
       })),
     };
@@ -282,6 +283,7 @@ function getFallbackProducts(options: ProductListOptions): PaginatedProducts {
 
 function mapProductRow(row: ProductWithImagesRow): CatalogProduct {
   const primaryImage = row.product_images[0];
+  const fallbackImageUrl = fallbackProducts[0].imageUrl;
 
   return {
     id: row.slug,
@@ -292,7 +294,7 @@ function mapProductRow(row: ProductWithImagesRow): CatalogProduct {
     reviews: row.review_count,
     priceHalalas: row.price_halalas,
     compareAtPriceHalalas: row.compare_at_price_halalas ?? undefined,
-    imageUrl: primaryImage?.url ?? fallbackProducts[0].imageUrl,
+    imageUrl: resolveProductImageUrl(primaryImage?.url, fallbackImageUrl),
     imageAlt: primaryImage?.alt_en ?? row.title_en,
     badge: row.badge ?? undefined,
   };
