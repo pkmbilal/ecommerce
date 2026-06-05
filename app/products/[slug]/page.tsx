@@ -146,7 +146,10 @@ export default async function ProductDetailPage({
               ) : null}
 
               <div className="mt-8 max-w-sm">
-                <QuickAddButton productTitle={product.title} />
+                <QuickAddButton
+                  productId={product.id}
+                  productTitle={product.title}
+                />
               </div>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2">

@@ -1,6 +1,7 @@
-import { CircleUserRound, Menu, Search, ShoppingBag } from "lucide-react";
+import { CircleUserRound, Menu, Search } from "lucide-react";
 import Link from "next/link";
 
+import { CartNavButton } from "@/components/cart/cart-nav-button";
 import { navItems } from "@/lib/storefront-data";
 
 export function SiteHeader() {
@@ -59,13 +60,7 @@ export function SiteHeader() {
           >
             <Search aria-hidden="true" className="size-5" />
           </button>
-          <Link
-            href="#cart"
-            aria-label="Cart"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-zinc-200"
-          >
-            <ShoppingBag aria-hidden="true" className="size-5" />
-          </Link>
+          <CartNavButton />
           <Link
             href="#account"
             aria-label="Account"
