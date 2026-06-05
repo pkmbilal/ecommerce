@@ -332,7 +332,14 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      place_cod_order: {
+        Args: {
+          payload: Json;
+        };
+        Returns: Json;
+      };
+    };
     Enums: {
       inventory_movement_type:
         | "seed"
