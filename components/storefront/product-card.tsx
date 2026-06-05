@@ -85,7 +85,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        <QuickAddButton productTitle={product.title} />
+        <QuickAddButton productId={product.id} productTitle={product.title} />
       </div>
     </article>
   );
