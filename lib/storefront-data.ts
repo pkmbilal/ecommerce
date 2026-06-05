@@ -2,6 +2,7 @@ export type Product = {
   id: string;
   title: string;
   category: string;
+  categorySlug?: string;
   rating: number;
   reviews: number;
   priceHalalas: number;
@@ -9,6 +10,13 @@ export type Product = {
   imageUrl: string;
   imageAlt: string;
   badge?: string;
+};
+
+export type CategoryTile = {
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl: string;
 };
 
 export const navItems = ["New Arrivals", "Best Sellers", "Abayas", "Accessories"];
@@ -96,19 +104,25 @@ export const products: Product[] = [
   },
 ];
 
-export const categories = [
+export const categories: CategoryTile[] = [
   {
     name: "Modest Essentials",
+    slug: "abayas",
+    description: "Modest layers and everyday abayas.",
     imageUrl:
       "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=85",
   },
   {
     name: "Workwear",
+    slug: "tops",
+    description: "Clean shirts and breathable tops.",
     imageUrl:
       "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=85",
   },
   {
     name: "Weekend Edits",
+    slug: "sets",
+    description: "Coordinated pieces for travel and weekends.",
     imageUrl:
       "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&q=85",
   },

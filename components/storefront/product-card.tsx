@@ -1,5 +1,6 @@
 import { Star } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 import type { Product } from "@/lib/storefront-data";
 import { calculateDiscountPercent, formatSar } from "@/lib/money";
@@ -17,7 +18,10 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <article className="group flex h-full flex-col">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-stone-100">
+      <Link
+        href={`/products/${product.id}`}
+        className="relative aspect-[4/5] overflow-hidden rounded-lg bg-stone-100"
+      >
         <Image
           src={product.imageUrl}
           alt={product.imageAlt}
@@ -37,15 +41,15 @@ export function ProductCard({ product }: ProductCardProps) {
             </span>
           ) : null}
         </div>
-      </div>
+      </Link>
 
       <div className="flex flex-1 flex-col gap-3 pt-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
             {product.category}
           </p>
-          <h3 className="mt-1 min-h-12 text-base font-bold leading-6 text-zinc-950">
-            {product.title}
+          <h3 className="mt-1 min-h-12 text-base font-bold leading-6 text-zinc-950 transition group-hover:text-emerald-800">
+            <Link href={`/products/${product.id}`}>{product.title}</Link>
           </h3>
         </div>
 

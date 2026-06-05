@@ -26,7 +26,7 @@ export function SiteHeader() {
           {navItems.map((item) => (
             <Link
               key={item}
-              href="#products"
+              href="/products"
               className="text-sm font-semibold text-zinc-700 transition hover:text-emerald-800"
             >
               {item}

@@ -4,19 +4,24 @@ import Link from "next/link";
 
 import { MotionReveal } from "@/components/storefront/motion-reveal";
 import { ProductCard } from "@/components/storefront/product-card";
+import { SectionHeader } from "@/components/storefront/section-header";
 import { SiteHeader } from "@/components/storefront/site-header";
-import { getStorefrontProducts } from "@/lib/products/queries";
+import {
+  getCategoryTiles,
+  getStorefrontProducts,
+} from "@/lib/products/queries";
 import {
   brandStrip,
-  categories,
   heroImages,
   reviews,
 } from "@/lib/storefront-data";
 
 export default async function Home() {
-  const products = await getStorefrontProducts();
-  const newArrivals = products.slice(0, 4);
-  const bestSellers = products.slice(2, 6);
+  const [newArrivals, bestSellers, categoryTiles] = await Promise.all([
+    getStorefrontProducts({ limit: 4 }),
+    getStorefrontProducts({ limit: 4, offset: 2, featuredOnly: true }),
+    getCategoryTiles(),
+  ]);
 
   return (
     <>
@@ -37,14 +42,14 @@ export default async function Home() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="#products"
+                  href="/products"
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-6 text-sm font-bold text-white transition hover:bg-emerald-800"
                 >
                   Shop new arrivals
                   <ArrowRight aria-hidden="true" className="size-4" />
                 </Link>
                 <Link
-                  href="#categories"
+                  href="/products"
                   className="inline-flex h-12 items-center justify-center rounded-full border border-zinc-300 bg-white px-6 text-sm font-bold text-zinc-950 transition hover:border-zinc-950"
                 >
                   Explore categories
@@ -115,10 +120,10 @@ export default async function Home() {
           <SectionHeader
             kicker="Fresh this week"
             title="New arrivals"
-            href="#products"
+            href="/products"
           />
           <MotionReveal className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
-            {newArrivals.map((product) => (
+            {newArrivals.items.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </MotionReveal>
@@ -129,10 +134,10 @@ export default async function Home() {
             <SectionHeader
               kicker="Customer favorites"
               title="Best sellers"
-              href="#products"
+              href="/products"
             />
             <MotionReveal className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
-              {bestSellers.map((product) => (
+              {bestSellers.items.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </MotionReveal>
@@ -146,10 +151,10 @@ export default async function Home() {
             href="#categories"
           />
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {categories.map((category, index) => (
+            {categoryTiles.map((category, index) => (
               <MotionReveal key={category.name} delay={index * 0.06}>
                 <Link
-                  href="#products"
+                  href={`/products?category=${category.slug}`}
                   className="group relative block aspect-[5/4] overflow-hidden rounded-lg bg-zinc-200"
                 >
                   <Image
@@ -211,7 +216,7 @@ export default async function Home() {
                   </blockquote>
                   <figcaption className="mt-6 text-sm text-zinc-600">
                     <span className="font-bold text-zinc-950">{review.name}</span>
-                    {" · "}
+                    {" - "}
                     {review.city}
                   </figcaption>
                 </figure>
@@ -256,43 +261,12 @@ export default async function Home() {
           <p className="text-xl font-black text-zinc-950">SAHA</p>
           <p>Saudi-first ecommerce foundation. COD orders only for V1.</p>
           <div className="flex gap-4 font-semibold">
-            <Link href="#products">Products</Link>
-            <Link href="#categories">Categories</Link>
+            <Link href="/products">Products</Link>
+            <Link href="/products">Categories</Link>
             <Link href="#account">Account</Link>
           </div>
         </div>
       </footer>
     </>
-  );
-}
-
-function SectionHeader({
-  kicker,
-  title,
-  href,
-}: {
-  kicker: string;
-  title: string;
-  href?: string;
-}) {
-  return (
-    <div className="flex items-end justify-between gap-4">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-wide text-emerald-800">
-          {kicker}
-        </p>
-        <h2 className="mt-2 text-4xl font-black tracking-tight text-zinc-950">
-          {title}
-        </h2>
-      </div>
-      {href ? (
-        <Link
-          href={href}
-          className="hidden text-sm font-bold text-zinc-950 underline decoration-zinc-300 underline-offset-4 transition hover:decoration-emerald-700 sm:inline"
-        >
-          View all
-        </Link>
-      ) : null}
-    </div>
   );
 }
