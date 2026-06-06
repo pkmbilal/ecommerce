@@ -7,10 +7,7 @@ import {
   type AppRole,
 } from "@/lib/auth/redirects";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
-import {
-  createSupabaseAuthServerClient,
-  createSupabaseServiceClient,
-} from "@/lib/supabase/server";
+import { createSupabaseAuthServerClient } from "@/lib/supabase/server";
 
 export { getRoleRedirectPath };
 
@@ -63,14 +60,14 @@ export async function getCurrentProfile(): Promise<AuthenticatedProfile | null> 
     return null;
   }
 
-  return getProfileForUser(data.user.id, data.user.email ?? "");
+  return getProfileForAuthenticatedUser(data.user.id, data.user.email ?? "");
 }
 
-export async function getProfileForUser(
+export async function getProfileForAuthenticatedUser(
   userId: string,
   fallbackEmail: string,
 ): Promise<AuthenticatedProfile> {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("id, email, full_name, role")
@@ -81,33 +78,10 @@ export async function getProfileForUser(
     throw new Error(`Failed to load user profile: ${error.message}`);
   }
 
-  if (data) {
-    return {
-      userId: data.id,
-      email: data.email || fallbackEmail,
-      fullName: data.full_name ?? undefined,
-      role: data.role,
-    };
-  }
-
-  const { data: created, error: insertError } = await supabase
-    .from("profiles")
-    .insert({
-      id: userId,
-      email: fallbackEmail,
-      role: "customer",
-    })
-    .select("id, email, full_name, role")
-    .single();
-
-  if (insertError) {
-    throw new Error(`Failed to create user profile: ${insertError.message}`);
-  }
-
   return {
-    userId: created.id,
-    email: created.email,
-    fullName: created.full_name ?? undefined,
-    role: created.role,
+    userId: data?.id ?? userId,
+    email: data?.email || fallbackEmail,
+    fullName: data?.full_name ?? undefined,
+    role: data?.role ?? "customer",
   };
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getProfileForUser } from "@/lib/admin/auth";
+import { getProfileForAuthenticatedUser } from "@/lib/admin/auth";
 import {
   getSafeInternalPath,
   getSafeRoleRedirectPath,
@@ -38,7 +38,10 @@ export async function POST(request: Request) {
     });
   }
 
-  const profile = await getProfileForUser(data.user.id, data.user.email ?? email);
+  const profile = await getProfileForAuthenticatedUser(
+    data.user.id,
+    data.user.email ?? email,
+  );
   const redirectPath = getSafeRoleRedirectPath(profile.role, next);
 
   return NextResponse.redirect(new URL(redirectPath, request.url), {
