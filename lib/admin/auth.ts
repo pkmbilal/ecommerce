@@ -22,7 +22,7 @@ export async function requireAdminSession() {
   const profile = await getCurrentProfile();
 
   if (!profile) {
-    redirect("/login?next=/admin/orders");
+    redirect("/login?next=/admin");
   }
 
   if (profile.role !== "admin") {

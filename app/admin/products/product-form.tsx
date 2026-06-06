@@ -2,6 +2,7 @@ import type {
   AdminCategory,
   AdminProductDetail,
 } from "@/lib/admin/catalog";
+import { AdminPanel } from "@/components/admin/tailadmin/primitives";
 
 type ProductFormProps = {
   action: string;
@@ -25,10 +26,10 @@ export function ProductForm({
       <form
         action={action}
         method="post"
-        className="rounded-lg border border-zinc-200 bg-white p-5 sm:p-6"
+        className="rounded-lg border border-gray-200 bg-white p-5 shadow-theme-sm sm:p-6"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-2xl font-black text-zinc-950">
+          <h2 className="text-xl font-semibold text-gray-900">
             {mode === "create" ? "Product details" : "Edit product"}
           </h2>
           <StatusMessages error={error} saved={saved} />
@@ -76,12 +77,12 @@ export function ProductForm({
               defaultValue="0"
             />
           ) : null}
-          <label className="grid gap-2 text-sm font-bold text-zinc-700">
+          <label className="grid gap-2 text-sm font-medium text-gray-700">
             Category
             <select
               name="categoryId"
               defaultValue={product?.categoryId ?? ""}
-              className="h-11 rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-950 outline-none focus:border-emerald-700"
+              className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-900 outline-none focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10"
             >
               <option value="">Unassigned</option>
               {categories.map((category) => (
@@ -91,18 +92,18 @@ export function ProductForm({
               ))}
             </select>
           </label>
-          <label className="grid gap-2 text-sm font-bold text-zinc-700 md:col-span-2">
+          <label className="grid gap-2 text-sm font-medium text-gray-700 md:col-span-2">
             Description
             <textarea
               name="description"
               rows={4}
               defaultValue={product?.description}
-              className="rounded-md border border-zinc-200 bg-white px-3 py-3 text-sm font-semibold text-zinc-950 outline-none focus:border-emerald-700"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-900 outline-none focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10"
             />
           </label>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-4 border-t border-zinc-200 pt-5">
+        <div className="mt-6 flex flex-wrap gap-4 border-t border-gray-200 pt-5">
           <Checkbox
             name="isActive"
             label="Active on storefront"
@@ -115,9 +116,9 @@ export function ProductForm({
           />
         </div>
 
-        <div className="mt-7 border-t border-zinc-200 pt-6">
-          <h3 className="text-xl font-black text-zinc-950">Product images</h3>
-          <p className="mt-1 text-sm text-zinc-500">
+        <div className="mt-7 border-t border-gray-200 pt-6">
+          <h3 className="text-lg font-semibold text-gray-900">Product images</h3>
+          <p className="mt-1 text-sm text-gray-500">
             Use approved HTTPS media URLs. The first completed image becomes
             primary unless another primary option is selected.
           </p>
@@ -128,7 +129,7 @@ export function ProductForm({
               return (
                 <div
                   key={index}
-                  className="grid gap-3 rounded-lg border border-zinc-200 p-4 md:grid-cols-[1fr_1fr_auto]"
+                  className="grid gap-3 rounded-lg border border-gray-200 p-4 md:grid-cols-[1fr_1fr_auto]"
                 >
                   <Field
                     label={`Image ${index + 1} URL`}
@@ -140,7 +141,7 @@ export function ProductForm({
                     name={`imageAlt${index}`}
                     defaultValue={image?.alt}
                   />
-                  <label className="flex items-end gap-2 pb-2 text-sm font-bold text-zinc-700">
+                  <label className="flex items-end gap-2 pb-2 text-sm font-medium text-gray-700">
                     <input
                       type="radio"
                       name="primaryImage"
@@ -148,7 +149,7 @@ export function ProductForm({
                       defaultChecked={
                         image?.isPrimary ?? (!product?.images.length && index === 0)
                       }
-                      className="size-4 accent-emerald-800"
+                      className="size-4 accent-brand-500"
                     />
                     Primary
                   </label>
@@ -160,7 +161,7 @@ export function ProductForm({
 
         <button
           type="submit"
-          className="mt-7 h-12 rounded-full bg-zinc-950 px-6 text-sm font-bold text-white transition hover:bg-emerald-800"
+          className="mt-7 h-12 rounded-lg bg-brand-500 px-6 text-sm font-semibold text-white transition hover:bg-brand-600"
         >
           {mode === "create" ? "Create product" : "Save product"}
         </button>
@@ -168,8 +169,8 @@ export function ProductForm({
 
       <aside className="space-y-6">
         {product ? (
-          <div className="rounded-lg border border-zinc-200 bg-white p-5">
-            <h2 className="text-xl font-black text-zinc-950">Inventory</h2>
+          <AdminPanel className="p-5">
+            <h2 className="text-lg font-semibold text-gray-900">Inventory</h2>
             <dl className="mt-4 grid gap-3 text-sm">
               <Detail label="Stock on hand" value={String(product.stockOnHand)} />
               <Detail
@@ -180,7 +181,7 @@ export function ProductForm({
             <form
               action={`/api/admin/products/${product.id}/inventory`}
               method="post"
-              className="mt-5 grid gap-4 border-t border-zinc-200 pt-5"
+              className="mt-5 grid gap-4 border-t border-gray-200 pt-5"
             >
               <Field
                 label="Target stock on hand"
@@ -195,23 +196,23 @@ export function ProductForm({
               />
               <button
                 type="submit"
-                className="h-11 rounded-full bg-emerald-800 px-5 text-sm font-bold text-white"
+                className="h-11 rounded-lg bg-gray-900 px-5 text-sm font-semibold text-white hover:bg-gray-800"
               >
                 Adjust stock
               </button>
             </form>
-          </div>
+          </AdminPanel>
         ) : null}
 
-        <div className="rounded-lg border border-zinc-200 bg-white p-5">
-          <h2 className="text-xl font-black text-zinc-950">Catalog rules</h2>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-600">
+        <AdminPanel className="p-5">
+          <h2 className="text-lg font-semibold text-gray-900">Catalog rules</h2>
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-500">
             <li>Prices are SAR amounts and are stored as integer halalas.</li>
             <li>Checkout totals are recalculated server-side.</li>
             <li>Inventory edits create explicit adjustment movements.</li>
             <li>Inactive products are hidden from public browsing.</li>
           </ul>
-        </div>
+        </AdminPanel>
       </aside>
     </div>
   );
@@ -233,7 +234,7 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-bold text-zinc-700">
+    <label className="grid gap-2 text-sm font-medium text-gray-700">
       {label}
       <input
         type={type}
@@ -241,7 +242,7 @@ function Field({
         inputMode={inputMode}
         defaultValue={defaultValue}
         placeholder={placeholder}
-        className="h-11 rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-950 outline-none focus:border-emerald-700"
+        className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-900 outline-none focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10"
       />
     </label>
   );
@@ -257,12 +258,12 @@ function Checkbox({
   defaultChecked: boolean;
 }) {
   return (
-    <label className="inline-flex items-center gap-2 text-sm font-bold text-zinc-700">
+    <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
       <input
         type="checkbox"
         name={name}
         defaultChecked={defaultChecked}
-        className="size-4 accent-emerald-800"
+        className="size-4 accent-brand-500"
       />
       {label}
     </label>
@@ -272,8 +273,8 @@ function Checkbox({
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <dt className="font-bold text-zinc-500">{label}</dt>
-      <dd className="font-black text-zinc-950">{value}</dd>
+      <dt className="font-medium text-gray-500">{label}</dt>
+      <dd className="font-semibold text-gray-900">{value}</dd>
     </div>
   );
 }
@@ -287,7 +288,7 @@ function StatusMessages({
 }) {
   if (error) {
     return (
-      <p className="rounded-full bg-rose-50 px-3 py-1 text-sm font-bold text-rose-700">
+      <p className="rounded-lg bg-error-50 px-3 py-1 text-sm font-medium text-error-700">
         {error}
       </p>
     );
@@ -295,7 +296,7 @@ function StatusMessages({
 
   if (saved) {
     return (
-      <p className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-800">
+      <p className="rounded-lg bg-success-50 px-3 py-1 text-sm font-medium text-success-700">
         Saved
       </p>
     );

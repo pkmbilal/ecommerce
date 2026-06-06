@@ -181,8 +181,34 @@ test("role based auth migration creates customer profiles and restricts role upd
   assert.match(migration, /execute function public\.handle_new_auth_user/);
 });
 
+test("admin role migration permits admin users to manage protected tables", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260606143000_add_admin_role_rls_policies.sql",
+  );
+
+  assert.match(migration, /create or replace function public\.current_user_is_admin/);
+  assert.match(migration, /role = 'admin'/);
+  assert.match(migration, /grant select, insert, update, delete on table public\.orders to authenticated/);
+  assert.match(migration, /create policy "Admins can manage orders"/);
+  assert.match(migration, /create policy "Admins can manage inventory items"/);
+  assert.match(migration, /grant execute on function public\.transition_cod_order_status/);
+  assert.match(migration, /grant execute on function public\.adjust_product_inventory/);
+});
+
+test("admin role RPCs run as invoker so RLS enforces admin access", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260606144500_use_invoker_for_admin_role_functions.sql",
+  );
+
+  assert.match(migration, /security invoker/);
+  assert.match(migration, /revoke execute on function public\.current_user_is_admin\(\) from public, anon/);
+  assert.match(migration, /grant execute on function public\.transition_cod_order_status/);
+  assert.match(migration, /to authenticated, service_role/);
+  assert.match(migration, /grant execute on function public\.adjust_product_inventory/);
+});
+
 test("role based login redirects to safe dashboards", () => {
-  assert.equal(getSafeRoleRedirectPath("admin"), "/admin/orders");
+  assert.equal(getSafeRoleRedirectPath("admin"), "/admin");
   assert.equal(getSafeRoleRedirectPath("customer"), "/account");
   assert.equal(
     getSafeRoleRedirectPath("admin", "/admin/products"),
@@ -192,7 +218,7 @@ test("role based login redirects to safe dashboards", () => {
     getSafeRoleRedirectPath("customer", "/admin/orders"),
     "/account",
   );
-  assert.equal(getSafeRoleRedirectPath("admin", "/login"), "/admin/orders");
+  assert.equal(getSafeRoleRedirectPath("admin", "/login"), "/admin");
   assert.equal(getSafeRoleRedirectPath("customer", "/login"), "/account");
   assert.equal(getSafeRoleRedirectPath("customer", "/checkout"), "/checkout");
   assert.equal(

@@ -2,7 +2,7 @@ import type { Enums } from "@/lib/supabase/database.types";
 
 export type AppRole = Enums<"app_role">;
 
-const ADMIN_DEFAULT_REDIRECT = "/admin/orders";
+const ADMIN_DEFAULT_REDIRECT = "/admin";
 const CUSTOMER_DEFAULT_REDIRECT = "/account";
 
 export function getRoleRedirectPath(role: AppRole) {
@@ -21,7 +21,9 @@ export function getSafeRoleRedirectPath(
   }
 
   if (role === "admin") {
-    return safePath.startsWith("/admin/") || safePath === "/account"
+    return safePath === "/admin" ||
+      safePath.startsWith("/admin/") ||
+      safePath === "/account"
       ? safePath
       : fallback;
   }

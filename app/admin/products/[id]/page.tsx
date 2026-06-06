@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { AdminShell } from "@/app/admin/orders/page";
+import { TailAdminShell } from "@/components/admin/tailadmin/admin-shell";
 import { ProductForm } from "@/app/admin/products/product-form";
 import { requireAdminSession } from "@/lib/admin/auth";
 import {
@@ -27,7 +27,7 @@ export default async function EditProductPage({
   params,
   searchParams,
 }: EditProductPageProps) {
-  await requireAdminSession();
+  const profile = await requireAdminSession();
 
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const [product, categories] = await Promise.all([
@@ -40,7 +40,8 @@ export default async function EditProductPage({
   }
 
   return (
-    <AdminShell
+    <TailAdminShell
+      profile={profile}
       title={product.title}
       subtitle="Edit catalog data, media metadata, and inventory settings."
     >
@@ -52,7 +53,7 @@ export default async function EditProductPage({
         saved={getSingleParam(query.saved) === "1"}
         mode="update"
       />
-    </AdminShell>
+    </TailAdminShell>
   );
 }
 
