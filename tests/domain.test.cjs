@@ -10,6 +10,10 @@ const {
   calculateVatHalalas,
 } = require("../lib/pricing.ts");
 const { validateCheckoutInput } = require("../lib/checkout/validation.ts");
+const {
+  getSafeInternalPath,
+  getSafeRoleRedirectPath,
+} = require("../lib/auth/redirects.ts");
 
 const root = path.resolve(__dirname, "..");
 
@@ -160,6 +164,43 @@ test("admin inventory adjustment migration updates stock and writes an audit mov
     migration,
     /grant execute on function public\.adjust_product_inventory/,
   );
+});
+
+test("role based auth migration creates customer profiles and restricts role updates", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260606133000_add_role_based_profiles.sql",
+  );
+
+  assert.match(migration, /create type public\.app_role as enum/);
+  assert.match(migration, /'customer'/);
+  assert.match(migration, /'admin'/);
+  assert.match(migration, /create table public\.profiles/);
+  assert.match(migration, /role public\.app_role not null default 'customer'/);
+  assert.match(migration, /grant update \(full_name\) on table public\.profiles to authenticated/);
+  assert.match(migration, /after insert on auth\.users/);
+  assert.match(migration, /execute function public\.handle_new_auth_user/);
+});
+
+test("role based login redirects to safe dashboards", () => {
+  assert.equal(getSafeRoleRedirectPath("admin"), "/admin/orders");
+  assert.equal(getSafeRoleRedirectPath("customer"), "/account");
+  assert.equal(
+    getSafeRoleRedirectPath("admin", "/admin/products"),
+    "/admin/products",
+  );
+  assert.equal(
+    getSafeRoleRedirectPath("customer", "/admin/orders"),
+    "/account",
+  );
+  assert.equal(getSafeRoleRedirectPath("admin", "/login"), "/admin/orders");
+  assert.equal(getSafeRoleRedirectPath("customer", "/login"), "/account");
+  assert.equal(getSafeRoleRedirectPath("customer", "/checkout"), "/checkout");
+  assert.equal(
+    getSafeRoleRedirectPath("customer", "/order-confirmation?order=COD-123"),
+    "/order-confirmation?order=COD-123",
+  );
+  assert.equal(getSafeInternalPath("https://example.com"), undefined);
+  assert.equal(getSafeInternalPath("//example.com"), undefined);
 });
 
 function readMigration(relativePath) {

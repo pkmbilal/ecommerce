@@ -280,6 +280,26 @@ export type Database = {
           },
         ];
       };
+      profiles: {
+        Row: {
+          created_at: string;
+          email: string;
+          full_name: string | null;
+          id: string;
+          role: Database["public"]["Enums"]["app_role"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          full_name?: string | null;
+          id: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
+      };
       products: {
         Row: {
           badge: string | null;
@@ -356,6 +376,7 @@ export type Database = {
       };
     };
     Enums: {
+      app_role: "customer" | "admin";
       inventory_movement_type:
         | "seed"
         | "reservation"

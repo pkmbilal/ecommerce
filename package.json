@@ -10,6 +10,7 @@
     "test": "node scripts/run-tests.cjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
     "lucide-react": "^1.17.0",
     "motion": "^12.40.0",

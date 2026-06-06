@@ -263,7 +263,7 @@ export default async function Home() {
           <div className="flex gap-4 font-semibold">
             <Link href="/products">Products</Link>
             <Link href="/products">Categories</Link>
-            <Link href="#account">Account</Link>
+            <Link href="/account">Account</Link>
           </div>
         </div>
       </footer>

@@ -12,7 +12,7 @@ export async function POST(
   context: RouteContext<"/api/admin/categories/[id]">,
 ) {
   if (!(await hasAdminSession())) {
-    return NextResponse.redirect(new URL("/admin/login", request.url), {
+    return NextResponse.redirect(new URL("/login?next=/admin/categories", request.url), {
       status: 303,
     });
   }

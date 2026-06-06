@@ -62,7 +62,7 @@ export function SiteHeader() {
           </button>
           <CartNavButton />
           <Link
-            href="#account"
+            href="/account"
             aria-label="Account"
             className="inline-flex size-10 items-center justify-center rounded-full border border-zinc-200"
           >

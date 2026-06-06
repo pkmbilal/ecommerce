@@ -21,7 +21,7 @@ type StatusRouteContext = {
 
 export async function POST(request: Request, context: StatusRouteContext) {
   if (!(await hasAdminSession())) {
-    return NextResponse.redirect(new URL("/admin/login", request.url), {
+    return NextResponse.redirect(new URL("/login?next=/admin/orders", request.url), {
       status: 303,
     });
   }
