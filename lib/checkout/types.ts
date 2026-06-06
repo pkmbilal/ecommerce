@@ -2,6 +2,7 @@ import type { CartItemInput } from "@/lib/cart/types";
 
 export type CheckoutInput = {
   idempotencyKey: string;
+  profileId?: string;
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;

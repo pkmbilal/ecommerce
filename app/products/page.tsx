@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { ProductCard } from "@/components/storefront/product-card";
 import { SectionHeader } from "@/components/storefront/section-header";
 import { SiteHeader } from "@/components/storefront/site-header";
+import { getCurrentProfile } from "@/lib/admin/auth";
+import { getFavoriteProductSlugs } from "@/lib/customer/account";
 import {
   getCategories,
   getStorefrontProducts,
@@ -30,14 +32,19 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const category = getSingleParam(query.category);
   const page = parsePage(getSingleParam(query.page));
   const offset = (page - 1) * PAGE_SIZE;
-  const [categories, products] = await Promise.all([
+  const [categories, products, profile] = await Promise.all([
     getCategories(),
     getStorefrontProducts({
       categorySlug: category,
       limit: PAGE_SIZE,
       offset,
     }),
+    getCurrentProfile(),
   ]);
+  const favoriteSlugs = profile
+    ? await getFavoriteProductSlugs(profile.userId)
+    : new Set<string>();
+  const returnTo = buildPageHref(category, page);
 
   return (
     <>
@@ -81,7 +88,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           {products.items.length > 0 ? (
             <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
               {products.items.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  isFavorite={favoriteSlugs.has(product.id)}
+                  returnTo={returnTo}
+                />
               ))}
             </div>
           ) : (

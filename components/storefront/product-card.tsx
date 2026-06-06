@@ -4,13 +4,20 @@ import Link from "next/link";
 
 import type { Product } from "@/lib/storefront-data";
 import { calculateDiscountPercent, formatSar } from "@/lib/money";
+import { FavoriteProductButton } from "./favorite-product-button";
 import { QuickAddButton } from "./quick-add-button";
 
 type ProductCardProps = {
   product: Product;
+  isFavorite?: boolean;
+  returnTo?: string;
 };
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({
+  product,
+  isFavorite = false,
+  returnTo = "/products",
+}: ProductCardProps) {
   const discount = calculateDiscountPercent(
     product.priceHalalas,
     product.compareAtPriceHalalas,
@@ -18,30 +25,37 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <article className="group flex h-full flex-col">
-      <Link
-        href={`/products/${product.id}`}
-        className="relative aspect-[4/5] overflow-hidden rounded-lg bg-stone-100"
-      >
-        <Image
-          src={product.imageUrl}
-          alt={product.imageAlt}
-          fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition duration-500 group-hover:scale-105"
-        />
-        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-          {product.badge ? (
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-zinc-950 shadow-sm">
-              {product.badge}
-            </span>
-          ) : null}
-          {discount ? (
-            <span className="rounded-full bg-rose-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
-              -{discount}%
-            </span>
-          ) : null}
+      <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-stone-100">
+        <Link href={`/products/${product.id}`} className="absolute inset-0">
+          <Image
+            src={product.imageUrl}
+            alt={product.imageAlt}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover transition duration-500 group-hover:scale-105"
+          />
+          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+            {product.badge ? (
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-zinc-950 shadow-sm">
+                {product.badge}
+              </span>
+            ) : null}
+            {discount ? (
+              <span className="rounded-full bg-rose-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                -{discount}%
+              </span>
+            ) : null}
+          </div>
+        </Link>
+        <div className="absolute right-3 top-3">
+          <FavoriteProductButton
+            productSlug={product.id}
+            isFavorite={isFavorite}
+            returnTo={returnTo}
+            compact
+          />
         </div>
-      </Link>
+      </div>
 
       <div className="flex flex-1 flex-col gap-3 pt-4">
         <div>

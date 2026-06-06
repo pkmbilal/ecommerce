@@ -1,109 +1,194 @@
+import { Heart, MapPin, PackageCheck, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AccountShell } from "@/components/account/account-shell";
+import {
+  AdminPanel,
+  AdminStatCard,
+  AdminStatusBadge,
+} from "@/components/admin/tailadmin/primitives";
 import { requireCustomerSession } from "@/lib/admin/auth";
+import { formatStatus, getStatusTone } from "@/lib/admin/status";
+import {
+  getCustomerProfile,
+  listCustomerAddresses,
+  listCustomerFavorites,
+} from "@/lib/customer/account";
+import { listCustomerOrders } from "@/lib/customer/orders";
+import { formatSar } from "@/lib/money";
 
 export const metadata: Metadata = {
-  title: "Account | SAHA",
+  title: "Account Dashboard | SAHA",
 };
 
-type AccountPageProps = {
-  searchParams: Promise<{
-    error?: string | string[];
-  }>;
-};
-
-export default async function AccountPage({ searchParams }: AccountPageProps) {
-  const [profile, params] = await Promise.all([
-    requireCustomerSession(),
-    searchParams,
+export default async function AccountPage() {
+  const session = await requireCustomerSession();
+  const [profile, addresses, favorites, orders] = await Promise.all([
+    getCustomerProfile(session.userId),
+    listCustomerAddresses(session.userId),
+    listCustomerFavorites(session.userId),
+    listCustomerOrders({ userId: session.userId, limit: 5 }),
   ]);
-  const isAdmin = profile.role === "admin";
-  const hasAdminError = getSingleParam(params.error) === "admin";
+  const defaultAddress = addresses.find((address) => address.isDefault);
 
   return (
-    <main className="min-h-screen bg-[#fbfaf7]">
-      <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-emerald-800">
-              SAHA account
-            </p>
-            <h1 className="mt-2 text-4xl font-black tracking-tight text-zinc-950">
-              Account dashboard
-            </h1>
-          </div>
-          <form action="/api/auth/logout" method="post">
-            <button
-              type="submit"
-              className="h-11 rounded-full border border-zinc-300 bg-white px-5 text-sm font-bold text-zinc-950 transition hover:border-zinc-950"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
+    <AccountShell
+      profile={profile}
+      title="Account dashboard"
+      subtitle="Track COD orders, manage saved Saudi delivery details, and keep favorite products ready for your next checkout."
+      actions={
+        <Link
+          href="/products"
+          className="inline-flex h-11 items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+        >
+          Continue shopping
+        </Link>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <AdminStatCard
+          label="Linked orders"
+          value={String(orders.items.length)}
+          note="Authenticated COD orders"
+          icon={<PackageCheck className="size-6" />}
+        />
+        <AdminStatCard
+          label="Saved addresses"
+          value={String(addresses.length)}
+          note={defaultAddress ? defaultAddress.cityRegion : "No default yet"}
+          icon={<MapPin className="size-6" />}
+        />
+        <AdminStatCard
+          label="Favorites"
+          value={String(favorites.length)}
+          note="Saved products"
+          icon={<Heart className="size-6" />}
+        />
+        <AdminStatCard
+          label="Profile"
+          value={profile.phone ? "Ready" : "Needs phone"}
+          note={profile.email}
+          icon={<UserRound className="size-6" />}
+        />
+      </div>
 
-        {hasAdminError ? (
-          <p className="mt-6 rounded-lg bg-rose-50 p-4 text-sm font-semibold text-rose-700">
-            This account does not have admin access.
-          </p>
-        ) : null}
-
-        <div className="mt-8 grid gap-6 md:grid-cols-[1fr_0.72fr]">
-          <section className="rounded-lg border border-zinc-200 bg-white p-6">
-            <h2 className="text-2xl font-black text-zinc-950">Profile</h2>
-            <dl className="mt-5 grid gap-4 text-sm">
-              <Detail label="Email" value={profile.email} />
-              <Detail label="Name" value={profile.fullName ?? "Not set"} />
-              <Detail label="Role" value={profile.role} />
-            </dl>
-          </section>
-
-          <aside className="rounded-lg border border-zinc-200 bg-white p-6">
-            <h2 className="text-2xl font-black text-zinc-950">Quick links</h2>
-            <div className="mt-5 grid gap-3">
-              <Link
-                href="/products"
-                className="rounded-full border border-zinc-200 px-5 py-3 text-sm font-bold text-zinc-950 transition hover:border-zinc-950"
-              >
-                Browse products
-              </Link>
-              <Link
-                href="/checkout"
-                className="rounded-full border border-zinc-200 px-5 py-3 text-sm font-bold text-zinc-950 transition hover:border-zinc-950"
-              >
-                Go to checkout
-              </Link>
-              {isAdmin ? (
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <AdminPanel
+          title="Recent orders"
+          description="Future logged-in cash on delivery orders appear here."
+          action={
+            <Link href="/account/orders" className="text-sm font-semibold text-emerald-700">
+              View all
+            </Link>
+          }
+          className="overflow-hidden"
+        >
+          {orders.items.length > 0 ? (
+            <div className="divide-y divide-gray-200">
+              {orders.items.map((order) => (
                 <Link
-                  href="/admin/orders"
-                  className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800"
+                  key={order.id}
+                  href={`/account/orders/${order.id}`}
+                  className="grid gap-3 px-5 py-4 transition hover:bg-gray-50 sm:grid-cols-[1fr_auto]"
                 >
-                  Open admin dashboard
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {order.publicOrderId}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {order.cityRegion} · {new Date(order.createdAt).toLocaleDateString("en-SA")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 sm:justify-end">
+                    <AdminStatusBadge tone={getStatusTone(order.status)}>
+                      {formatStatus(order.status)}
+                    </AdminStatusBadge>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatSar(order.totalHalalas)}
+                    </span>
+                  </div>
                 </Link>
-              ) : (
-                <p className="rounded-lg bg-zinc-50 p-3 text-sm font-semibold text-zinc-600">
-                  Customer order lookup will appear here when that launch
-                  feature is implemented.
-                </p>
-              )}
+              ))}
             </div>
-          </aside>
-        </div>
-      </section>
-    </main>
+          ) : (
+            <EmptyState
+              title="No linked orders yet"
+              description="Sign in before checkout and your COD order history will appear here."
+              href="/products"
+              action="Browse products"
+            />
+          )}
+        </AdminPanel>
+
+        <AdminPanel title="Delivery snapshot" description="Your default checkout details.">
+          {defaultAddress ? (
+            <div className="p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {defaultAddress.label}
+                </h2>
+                <AdminStatusBadge tone="success">Default</AdminStatusBadge>
+              </div>
+              <dl className="mt-5 grid gap-4 text-sm">
+                <Detail label="Recipient" value={defaultAddress.recipientName} />
+                <Detail label="Phone" value={defaultAddress.phone} />
+                <Detail label="City or region" value={defaultAddress.cityRegion} />
+                <Detail label="Address" value={defaultAddress.deliveryAddress} />
+              </dl>
+              <Link
+                href="/account/addresses"
+                className="mt-5 inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Manage addresses
+              </Link>
+            </div>
+          ) : (
+            <EmptyState
+              title="Add your first address"
+              description="Save a Saudi delivery address to speed up checkout."
+              href="/account/addresses"
+              action="Add address"
+            />
+          )}
+        </AdminPanel>
+      </div>
+    </AccountShell>
   );
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="font-bold text-zinc-500">{label}</dt>
-      <dd className="mt-1 font-semibold text-zinc-950">{value}</dd>
+      <dt className="font-medium text-gray-500">{label}</dt>
+      <dd className="mt-1 font-semibold text-gray-900">{value}</dd>
     </div>
   );
 }
 
-function getSingleParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+function EmptyState({
+  title,
+  description,
+  href,
+  action,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  action: string;
+}) {
+  return (
+    <div className="p-8 text-center">
+      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500">
+        {description}
+      </p>
+      <Link
+        href={href}
+        className="mt-5 inline-flex h-10 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800"
+      >
+        {action}
+      </Link>
+    </div>
+  );
 }

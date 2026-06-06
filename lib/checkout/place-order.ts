@@ -18,6 +18,7 @@ export async function placeCodOrder(
   const { data, error } = await supabase.rpc("place_cod_order", {
     payload: {
       idempotency_key: input.idempotencyKey,
+      profile_id: input.profileId ?? null,
       customer: {
         name: input.customerName,
         phone: input.customerPhone,

@@ -5,7 +5,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { QuickAddButton } from "@/components/storefront/quick-add-button";
+import { FavoriteProductButton } from "@/components/storefront/favorite-product-button";
 import { SiteHeader } from "@/components/storefront/site-header";
+import { getCurrentProfile } from "@/lib/admin/auth";
+import { getFavoriteProductSlugs } from "@/lib/customer/account";
 import { calculateDiscountPercent, formatSar } from "@/lib/money";
 import { getProductBySlug } from "@/lib/products/queries";
 
@@ -39,7 +42,10 @@ export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, profile] = await Promise.all([
+    getProductBySlug(slug),
+    getCurrentProfile(),
+  ]);
 
   if (!product) {
     notFound();
@@ -53,6 +59,10 @@ export default async function ProductDetailPage({
     url: product.imageUrl,
     alt: product.imageAlt,
   };
+  const favoriteSlugs = profile
+    ? await getFavoriteProductSlugs(profile.userId)
+    : new Set<string>();
+  const returnTo = `/products/${product.slug}`;
 
   return (
     <>
@@ -145,10 +155,15 @@ export default async function ProductDetailPage({
                 </p>
               ) : null}
 
-              <div className="mt-8 max-w-sm">
+              <div className="mt-8 flex max-w-xl flex-col gap-3 sm:flex-row">
                 <QuickAddButton
                   productId={product.id}
                   productTitle={product.title}
+                />
+                <FavoriteProductButton
+                  productSlug={product.slug}
+                  isFavorite={favoriteSlugs.has(product.slug)}
+                  returnTo={returnTo}
                 />
               </div>
 

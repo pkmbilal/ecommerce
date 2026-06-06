@@ -1,0 +1,342 @@
+alter table public.profiles
+  add column if not exists phone text;
+
+alter table public.profiles
+  add constraint profiles_phone_sa
+  check (phone is null or phone ~ '^(\+966|966|0)?5[0-9]{8}$');
+
+grant update (full_name, phone) on table public.profiles to authenticated;
+
+create table public.customer_addresses (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  label text not null,
+  recipient_name text not null,
+  phone text not null,
+  city_region text not null,
+  delivery_address text not null,
+  notes text,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint customer_addresses_label_not_blank check (length(trim(label)) >= 2),
+  constraint customer_addresses_recipient_not_blank check (length(trim(recipient_name)) >= 2),
+  constraint customer_addresses_phone_sa check (phone ~ '^(\+966|966|0)?5[0-9]{8}$'),
+  constraint customer_addresses_city_not_blank check (length(trim(city_region)) >= 2),
+  constraint customer_addresses_address_not_blank check (length(trim(delivery_address)) >= 8)
+);
+
+create unique index customer_addresses_one_default_per_profile_idx
+  on public.customer_addresses(profile_id)
+  where is_default;
+
+create index customer_addresses_profile_created_idx
+  on public.customer_addresses(profile_id, created_at desc);
+
+create trigger customer_addresses_set_updated_at
+  before update on public.customer_addresses
+  for each row execute function public.set_updated_at();
+
+create table public.product_favorites (
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  product_id uuid not null references public.products(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (profile_id, product_id)
+);
+
+create index product_favorites_profile_created_idx
+  on public.product_favorites(profile_id, created_at desc);
+
+alter table public.orders
+  add column if not exists profile_id uuid references public.profiles(id) on delete set null;
+
+create index orders_profile_created_idx
+  on public.orders(profile_id, created_at desc);
+
+alter table public.customer_addresses enable row level security;
+alter table public.product_favorites enable row level security;
+
+revoke all on table public.customer_addresses from anon, authenticated;
+revoke all on table public.product_favorites from anon, authenticated;
+
+grant select, insert, update, delete on table public.customer_addresses to authenticated;
+grant select, insert, delete on table public.product_favorites to authenticated;
+grant select, insert, update, delete on table public.customer_addresses to service_role;
+grant select, insert, update, delete on table public.product_favorites to service_role;
+
+create policy "Users can manage own addresses"
+  on public.customer_addresses for all
+  to authenticated
+  using ((select auth.uid()) = profile_id)
+  with check ((select auth.uid()) = profile_id);
+
+create policy "Users can manage own favorites"
+  on public.product_favorites for all
+  to authenticated
+  using ((select auth.uid()) = profile_id)
+  with check ((select auth.uid()) = profile_id);
+
+create policy "Users can read own orders"
+  on public.orders for select
+  to authenticated
+  using ((select auth.uid()) = profile_id);
+
+create policy "Users can read own order items"
+  on public.order_items for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.orders
+      where orders.id = order_items.order_id
+        and orders.profile_id = (select auth.uid())
+    )
+  );
+
+create or replace function public.place_cod_order(payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_catalog
+as $$
+declare
+  v_idempotency_key text := nullif(trim(payload->>'idempotency_key'), '');
+  v_profile_id uuid := nullif(trim(payload->>'profile_id'), '')::uuid;
+  v_customer_name text := nullif(trim(payload #>> '{customer,name}'), '');
+  v_customer_phone text := nullif(trim(payload #>> '{customer,phone}'), '');
+  v_delivery_address text := nullif(trim(payload #>> '{delivery,address}'), '');
+  v_city_region text := nullif(trim(payload #>> '{delivery,city_region}'), '');
+  v_notes text := nullif(trim(payload->>'notes'), '');
+  v_items jsonb := payload->'items';
+  v_existing_order_id uuid;
+  v_existing_public_order_id text;
+  v_customer_id uuid;
+  v_order_id uuid;
+  v_subtotal integer := 0;
+  v_vat integer := 0;
+  v_shipping integer := 0;
+  v_total integer := 0;
+  v_item jsonb;
+  v_product record;
+  v_quantity integer;
+  v_available integer;
+begin
+  if v_idempotency_key is null or length(v_idempotency_key) < 16 then
+    raise exception 'A valid idempotency key is required' using errcode = '22023';
+  end if;
+
+  if v_profile_id is not null and not exists (
+    select 1 from public.profiles where id = v_profile_id
+  ) then
+    raise exception 'Profile not found' using errcode = '22023';
+  end if;
+
+  if v_customer_name is null or length(v_customer_name) < 2 then
+    raise exception 'Customer name is required' using errcode = '22023';
+  end if;
+
+  if v_customer_phone is null or v_customer_phone !~ '^(\+966|966|0)?5[0-9]{8}$' then
+    raise exception 'A valid Saudi phone number is required' using errcode = '22023';
+  end if;
+
+  if v_delivery_address is null or length(v_delivery_address) < 8 then
+    raise exception 'Delivery address is required' using errcode = '22023';
+  end if;
+
+  if v_city_region is null or length(v_city_region) < 2 then
+    raise exception 'City or region is required' using errcode = '22023';
+  end if;
+
+  if jsonb_typeof(v_items) <> 'array' or jsonb_array_length(v_items) = 0 then
+    raise exception 'Cart items are required' using errcode = '22023';
+  end if;
+
+  select order_id into v_existing_order_id
+  from public.idempotency_keys
+  where key = v_idempotency_key and scope = 'cod_checkout';
+
+  if v_existing_order_id is not null then
+    select public_order_id into v_existing_public_order_id
+    from public.orders
+    where id = v_existing_order_id;
+
+    return jsonb_build_object(
+      'orderId', v_existing_order_id,
+      'publicOrderId', v_existing_public_order_id,
+      'status', 'already_created'
+    );
+  end if;
+
+  insert into public.idempotency_keys (key, scope, request_hash)
+  values (v_idempotency_key, 'cod_checkout', md5(payload::text))
+  on conflict (key) do nothing;
+
+  select order_id into v_existing_order_id
+  from public.idempotency_keys
+  where key = v_idempotency_key and scope = 'cod_checkout'
+  for update;
+
+  if v_existing_order_id is not null then
+    select public_order_id into v_existing_public_order_id
+    from public.orders
+    where id = v_existing_order_id;
+
+    return jsonb_build_object(
+      'orderId', v_existing_order_id,
+      'publicOrderId', v_existing_public_order_id,
+      'status', 'already_created'
+    );
+  end if;
+
+  for v_item in select value from jsonb_array_elements(v_items)
+  loop
+    v_quantity := nullif(v_item->>'quantity', '')::integer;
+
+    if v_quantity is null or v_quantity < 1 or v_quantity > 99 then
+      raise exception 'Invalid item quantity' using errcode = '22023';
+    end if;
+
+    select
+      p.id,
+      p.slug,
+      p.sku,
+      p.title_en,
+      p.price_halalas,
+      p.vat_rate_bps,
+      i.stock_on_hand,
+      i.reserved_quantity
+    into v_product
+    from public.products p
+    join public.inventory_items i on i.product_id = p.id
+    where p.slug = v_item->>'productId'
+      and p.is_active = true
+    for update of i;
+
+    if v_product.id is null then
+      raise exception 'A cart item is no longer available' using errcode = '22023';
+    end if;
+
+    v_available := v_product.stock_on_hand - v_product.reserved_quantity;
+
+    if v_available < v_quantity then
+      raise exception 'Insufficient inventory for %', v_product.slug using errcode = '22023';
+    end if;
+
+    v_subtotal := v_subtotal + (v_product.price_halalas * v_quantity);
+    v_vat := v_vat + round((v_product.price_halalas * v_quantity) * v_product.vat_rate_bps::numeric / 10000)::integer;
+  end loop;
+
+  v_total := v_subtotal + v_vat + v_shipping;
+
+  insert into public.customers (full_name, phone)
+  values (v_customer_name, v_customer_phone)
+  returning id into v_customer_id;
+
+  insert into public.orders (
+    profile_id,
+    customer_id,
+    customer_name,
+    customer_phone,
+    delivery_address,
+    city_region,
+    notes,
+    subtotal_halalas,
+    vat_halalas,
+    shipping_halalas,
+    total_halalas
+  ) values (
+    v_profile_id,
+    v_customer_id,
+    v_customer_name,
+    v_customer_phone,
+    v_delivery_address,
+    v_city_region,
+    v_notes,
+    v_subtotal,
+    v_vat,
+    v_shipping,
+    v_total
+  )
+  returning id into v_order_id;
+
+  for v_item in select value from jsonb_array_elements(v_items)
+  loop
+    v_quantity := (v_item->>'quantity')::integer;
+
+    select
+      p.id,
+      p.slug,
+      p.sku,
+      p.title_en,
+      p.price_halalas,
+      p.vat_rate_bps
+    into v_product
+    from public.products p
+    where p.slug = v_item->>'productId'
+      and p.is_active = true;
+
+    insert into public.order_items (
+      order_id,
+      product_id,
+      product_slug,
+      product_sku,
+      product_title_en,
+      quantity,
+      unit_price_halalas,
+      vat_rate_bps,
+      line_subtotal_halalas
+    ) values (
+      v_order_id,
+      v_product.id,
+      v_product.slug,
+      v_product.sku,
+      v_product.title_en,
+      v_quantity,
+      v_product.price_halalas,
+      v_product.vat_rate_bps,
+      v_product.price_halalas * v_quantity
+    );
+
+    update public.inventory_items
+    set reserved_quantity = reserved_quantity + v_quantity
+    where product_id = v_product.id;
+
+    insert into public.inventory_movements (
+      product_id,
+      order_id,
+      movement_type,
+      quantity_delta,
+      reason
+    ) values (
+      v_product.id,
+      v_order_id,
+      'reservation',
+      -v_quantity,
+      'COD checkout inventory reservation'
+    );
+  end loop;
+
+  update public.idempotency_keys
+  set order_id = v_order_id
+  where key = v_idempotency_key and scope = 'cod_checkout';
+
+  select public_order_id into v_existing_public_order_id
+  from public.orders
+  where id = v_order_id;
+
+  return jsonb_build_object(
+    'orderId', v_order_id,
+    'publicOrderId', v_existing_public_order_id,
+    'status', 'created',
+    'totals', jsonb_build_object(
+      'subtotalHalalas', v_subtotal,
+      'vatHalalas', v_vat,
+      'shippingHalalas', v_shipping,
+      'totalHalalas', v_total
+    )
+  );
+end;
+$$;
+
+revoke execute on function public.place_cod_order(jsonb) from public, anon, authenticated;
+grant execute on function public.place_cod_order(jsonb) to service_role;

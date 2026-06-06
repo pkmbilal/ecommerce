@@ -42,6 +42,7 @@ export function getSafeInternalPath(value: string | null | undefined) {
 function isCustomerAllowedPath(path: string) {
   return (
     path === "/account" ||
+    path.startsWith("/account/") ||
     path === "/checkout" ||
     path === "/products" ||
     path.startsWith("/products?") ||

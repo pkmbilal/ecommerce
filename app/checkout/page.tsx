@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 import { SiteHeader } from "@/components/storefront/site-header";
+import { getCurrentProfile } from "@/lib/admin/auth";
+import { getCustomerProfile, listCustomerAddresses } from "@/lib/customer/account";
 
 import { CheckoutClient } from "./checkout-client";
 
@@ -10,7 +12,17 @@ export const metadata: Metadata = {
     "Place a cash on delivery order with Saudi delivery details and server-validated totals.",
 };
 
-export default function CheckoutPage() {
+export default async function CheckoutPage() {
+  const session = await getCurrentProfile();
+  const accountData = session
+    ? await Promise.all([
+        getCustomerProfile(session.userId),
+        listCustomerAddresses(session.userId),
+      ])
+    : null;
+  const profile = accountData?.[0];
+  const defaultAddress = accountData?.[1].find((address) => address.isDefault);
+
   return (
     <>
       <SiteHeader />
@@ -26,7 +38,15 @@ export default function CheckoutPage() {
             Enter Saudi delivery details. Final totals and inventory are
             recalculated on the server before your COD order is created.
           </p>
-          <CheckoutClient />
+          <CheckoutClient
+            defaultValues={{
+              customerName:
+                defaultAddress?.recipientName ?? profile?.fullName ?? "",
+              customerPhone: defaultAddress?.phone ?? profile?.phone ?? "",
+              cityRegion: defaultAddress?.cityRegion ?? "",
+              deliveryAddress: defaultAddress?.deliveryAddress ?? "",
+            }}
+          />
         </section>
       </main>
     </>
