@@ -9,6 +9,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
@@ -30,17 +31,22 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 const CART_STORAGE_KEY = "saha-cart-v1";
+const EMPTY_CART_ITEMS: CartItemInput[] = [];
+const cartListeners = new Set<() => void>();
+
+let cartSnapshot: CartItemInput[] = EMPTY_CART_ITEMS;
+let hasReadStoredCart = false;
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItemInput[]>(readStoredCart);
+  const items = useSyncExternalStore(
+    subscribeToCart,
+    getCartSnapshot,
+    getServerCartSnapshot,
+  );
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
-
   const addItem = useCallback((productId: string) => {
-    setItems((currentItems) => {
+    writeCartItems((currentItems) => {
       const existingItem = currentItems.find((item) => item.productId === productId);
 
       if (existingItem) {
@@ -57,7 +63,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
-    setItems((currentItems) =>
+    writeCartItems((currentItems) =>
       normalizeItems(
         currentItems.map((item) =>
           item.productId === productId ? { ...item, quantity } : item,
@@ -67,13 +73,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const removeItem = useCallback((productId: string) => {
-    setItems((currentItems) =>
+    writeCartItems((currentItems) =>
       currentItems.filter((item) => item.productId !== productId),
     );
   }, []);
 
   const clearCart = useCallback(() => {
-    setItems([]);
+    writeCartItems([]);
   }, []);
 
   const value = useMemo<CartContextValue>(
@@ -342,6 +348,50 @@ function normalizeItems(items: CartItemInput[]) {
       productId: item.productId,
       quantity: Math.min(item.quantity, 99),
     }));
+}
+
+function subscribeToCart(listener: () => void) {
+  cartListeners.add(listener);
+
+  return () => {
+    cartListeners.delete(listener);
+  };
+}
+
+function getCartSnapshot() {
+  if (typeof window === "undefined") {
+    return EMPTY_CART_ITEMS;
+  }
+
+  if (!hasReadStoredCart) {
+    cartSnapshot = readStoredCart();
+    hasReadStoredCart = true;
+  }
+
+  return cartSnapshot;
+}
+
+function getServerCartSnapshot() {
+  return EMPTY_CART_ITEMS;
+}
+
+function writeCartItems(
+  nextItems:
+    | CartItemInput[]
+    | ((currentItems: CartItemInput[]) => CartItemInput[]),
+) {
+  const currentItems = getCartSnapshot();
+  const resolvedItems =
+    typeof nextItems === "function" ? nextItems(currentItems) : nextItems;
+
+  cartSnapshot = normalizeItems(resolvedItems);
+  hasReadStoredCart = true;
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartSnapshot));
+  }
+
+  cartListeners.forEach((listener) => listener());
 }
 
 function readStoredCart() {

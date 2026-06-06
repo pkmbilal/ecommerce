@@ -1,4 +1,5 @@
 import { summarizeCartItems } from "@/lib/cart/validation";
+import { getCurrentProfile } from "@/lib/admin/auth";
 import { placeCodOrder } from "@/lib/checkout/place-order";
 import { validateCheckoutInput } from "@/lib/checkout/validation";
 
@@ -35,7 +36,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const order = await placeCodOrder(validation.data);
+    const profile = await getCurrentProfile();
+    const order = await placeCodOrder({
+      ...validation.data,
+      profileId: profile?.userId,
+    });
     return Response.json({ order });
   } catch (error) {
     return Response.json(

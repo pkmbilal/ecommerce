@@ -11,6 +11,10 @@ const {
 } = require("../lib/pricing.ts");
 const { validateCheckoutInput } = require("../lib/checkout/validation.ts");
 const {
+  validateAddressForm,
+  validateProfileForm,
+} = require("../lib/customer/validation.ts");
+const {
   getSafeInternalPath,
   getSafeRoleRedirectPath,
 } = require("../lib/auth/redirects.ts");
@@ -214,6 +218,11 @@ test("role based login redirects to safe dashboards", () => {
     getSafeRoleRedirectPath("admin", "/admin/products"),
     "/admin/products",
   );
+  assert.equal(getSafeRoleRedirectPath("admin", "/account"), "/admin");
+  assert.equal(
+    getSafeRoleRedirectPath("admin", "/account/orders"),
+    "/admin",
+  );
   assert.equal(
     getSafeRoleRedirectPath("customer", "/admin/orders"),
     "/account",
@@ -222,11 +231,100 @@ test("role based login redirects to safe dashboards", () => {
   assert.equal(getSafeRoleRedirectPath("customer", "/login"), "/account");
   assert.equal(getSafeRoleRedirectPath("customer", "/checkout"), "/checkout");
   assert.equal(
+    getSafeRoleRedirectPath("customer", "/account/orders"),
+    "/account/orders",
+  );
+  assert.equal(
     getSafeRoleRedirectPath("customer", "/order-confirmation?order=COD-123"),
     "/order-confirmation?order=COD-123",
   );
   assert.equal(getSafeInternalPath("https://example.com"), undefined);
   assert.equal(getSafeInternalPath("//example.com"), undefined);
+});
+
+test("validates customer profile and address forms", () => {
+  const profileForm = new FormData();
+  profileForm.set("fullName", "  Nora Ahmed  ");
+  profileForm.set("phone", "0551234567");
+
+  const profileResult = validateProfileForm(profileForm);
+
+  assert.equal(profileResult.success, true);
+
+  if (profileResult.success) {
+    assert.equal(profileResult.data.fullName, "Nora Ahmed");
+    assert.equal(profileResult.data.phone, "0551234567");
+  }
+
+  const addressForm = new FormData();
+  addressForm.set("label", "Home");
+  addressForm.set("recipientName", "Nora Ahmed");
+  addressForm.set("phone", "0551234567");
+  addressForm.set("cityRegion", "Riyadh");
+  addressForm.set("deliveryAddress", "King Fahd Road, Riyadh");
+  addressForm.set("notes", "  Call before delivery  ");
+  addressForm.set("isDefault", "on");
+
+  const addressResult = validateAddressForm(addressForm);
+
+  assert.equal(addressResult.success, true);
+
+  if (addressResult.success) {
+    assert.equal(addressResult.data.notes, "Call before delivery");
+    assert.equal(addressResult.data.isDefault, true);
+  }
+});
+
+test("rejects invalid customer dashboard forms", () => {
+  const profileForm = new FormData();
+  profileForm.set("fullName", "A");
+  profileForm.set("phone", "0412345678");
+
+  const profileResult = validateProfileForm(profileForm);
+
+  assert.equal(profileResult.success, false);
+
+  if (!profileResult.success) {
+    assert.deepEqual(Object.keys(profileResult.errors).sort(), [
+      "fullName",
+      "phone",
+    ]);
+  }
+
+  const addressForm = new FormData();
+  addressForm.set("label", "H");
+  addressForm.set("recipientName", "");
+  addressForm.set("phone", "0412345678");
+  addressForm.set("cityRegion", "");
+  addressForm.set("deliveryAddress", "Short");
+
+  const addressResult = validateAddressForm(addressForm);
+
+  assert.equal(addressResult.success, false);
+
+  if (!addressResult.success) {
+    assert.deepEqual(Object.keys(addressResult.errors).sort(), [
+      "cityRegion",
+      "deliveryAddress",
+      "label",
+      "phone",
+      "recipientName",
+    ]);
+  }
+});
+
+test("customer dashboard migration adds owned addresses favorites and linked orders", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260606160000_add_customer_dashboard.sql",
+  );
+
+  assert.match(migration, /add column if not exists phone text/);
+  assert.match(migration, /create table public\.customer_addresses/);
+  assert.match(migration, /create table public\.product_favorites/);
+  assert.match(migration, /add column if not exists profile_id uuid references public\.profiles/);
+  assert.match(migration, /Users can read own orders/);
+  assert.match(migration, /v_profile_id uuid := nullif\(trim\(payload->>'profile_id'\), ''\)::uuid/);
+  assert.match(migration, /profile_id,\s+customer_id,/);
 });
 
 function readMigration(relativePath) {

@@ -21,9 +21,7 @@ export function getSafeRoleRedirectPath(
   }
 
   if (role === "admin") {
-    return safePath === "/admin" ||
-      safePath.startsWith("/admin/") ||
-      safePath === "/account"
+    return safePath === "/admin" || safePath.startsWith("/admin/")
       ? safePath
       : fallback;
   }
@@ -42,6 +40,7 @@ export function getSafeInternalPath(value: string | null | undefined) {
 function isCustomerAllowedPath(path: string) {
   return (
     path === "/account" ||
+    path.startsWith("/account/") ||
     path === "/checkout" ||
     path === "/products" ||
     path.startsWith("/products?") ||

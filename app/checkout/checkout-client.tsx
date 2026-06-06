@@ -23,7 +23,16 @@ type CheckoutResponse = {
   errors?: Record<string, string>;
 };
 
-export function CheckoutClient() {
+type CheckoutClientProps = {
+  defaultValues?: {
+    customerName?: string;
+    customerPhone?: string;
+    cityRegion?: string;
+    deliveryAddress?: string;
+  };
+};
+
+export function CheckoutClient({ defaultValues }: CheckoutClientProps) {
   const { items, clearCart } = useCart();
   const cartKey = JSON.stringify(items);
   const [summaryState, setSummaryState] = useState<{
@@ -161,6 +170,7 @@ export function CheckoutClient() {
           <Field
             label="Customer name"
             name="customerName"
+            defaultValue={defaultValues?.customerName}
             error={errors.customerName}
             autoComplete="name"
             required
@@ -168,6 +178,7 @@ export function CheckoutClient() {
           <Field
             label="Saudi phone number"
             name="customerPhone"
+            defaultValue={defaultValues?.customerPhone}
             error={errors.customerPhone}
             autoComplete="tel"
             inputMode="tel"
@@ -177,6 +188,7 @@ export function CheckoutClient() {
           <Field
             label="City or region"
             name="cityRegion"
+            defaultValue={defaultValues?.cityRegion}
             error={errors.cityRegion}
             autoComplete="address-level2"
             required
@@ -187,6 +199,7 @@ export function CheckoutClient() {
             </span>
             <textarea
               name="deliveryAddress"
+              defaultValue={defaultValues?.deliveryAddress}
               required
               rows={4}
               autoComplete="street-address"

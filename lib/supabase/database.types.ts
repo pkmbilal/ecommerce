@@ -58,6 +58,44 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["customers"]["Insert"]>;
         Relationships: [];
       };
+      customer_addresses: {
+        Row: {
+          city_region: string;
+          created_at: string;
+          delivery_address: string;
+          id: string;
+          is_default: boolean;
+          label: string;
+          notes: string | null;
+          phone: string;
+          profile_id: string;
+          recipient_name: string;
+          updated_at: string;
+        };
+        Insert: {
+          city_region: string;
+          created_at?: string;
+          delivery_address: string;
+          id?: string;
+          is_default?: boolean;
+          label: string;
+          notes?: string | null;
+          phone: string;
+          profile_id: string;
+          recipient_name: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["customer_addresses"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "customer_addresses_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       idempotency_keys: {
         Row: {
           created_at: string;
@@ -208,6 +246,7 @@ export type Database = {
           id: string;
           notes: string | null;
           payment_method: string;
+          profile_id: string | null;
           public_order_id: string;
           shipping_halalas: number;
           status: Database["public"]["Enums"]["order_status"];
@@ -229,6 +268,7 @@ export type Database = {
           id?: string;
           notes?: string | null;
           payment_method?: string;
+          profile_id?: string | null;
           public_order_id?: string;
           shipping_halalas?: number;
           status?: Database["public"]["Enums"]["order_status"];
@@ -244,6 +284,13 @@ export type Database = {
             columns: ["customer_id"];
             isOneToOne: false;
             referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -280,12 +327,42 @@ export type Database = {
           },
         ];
       };
+      product_favorites: {
+        Row: {
+          created_at: string;
+          product_id: string;
+          profile_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          product_id: string;
+          profile_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_favorites"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "product_favorites_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_favorites_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           created_at: string;
           email: string;
           full_name: string | null;
           id: string;
+          phone: string | null;
           role: Database["public"]["Enums"]["app_role"];
           updated_at: string;
         };
@@ -294,6 +371,7 @@ export type Database = {
           email: string;
           full_name?: string | null;
           id: string;
+          phone?: string | null;
           role?: Database["public"]["Enums"]["app_role"];
           updated_at?: string;
         };

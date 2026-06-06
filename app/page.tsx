@@ -6,6 +6,8 @@ import { MotionReveal } from "@/components/storefront/motion-reveal";
 import { ProductCard } from "@/components/storefront/product-card";
 import { SectionHeader } from "@/components/storefront/section-header";
 import { SiteHeader } from "@/components/storefront/site-header";
+import { getCurrentProfile } from "@/lib/admin/auth";
+import { getFavoriteProductSlugs } from "@/lib/customer/account";
 import {
   getCategoryTiles,
   getStorefrontProducts,
@@ -17,11 +19,15 @@ import {
 } from "@/lib/storefront-data";
 
 export default async function Home() {
-  const [newArrivals, bestSellers, categoryTiles] = await Promise.all([
+  const [newArrivals, bestSellers, categoryTiles, profile] = await Promise.all([
     getStorefrontProducts({ limit: 4 }),
     getStorefrontProducts({ limit: 4, offset: 2, featuredOnly: true }),
     getCategoryTiles(),
+    getCurrentProfile(),
   ]);
+  const favoriteSlugs = profile
+    ? await getFavoriteProductSlugs(profile.userId)
+    : new Set<string>();
 
   return (
     <>
@@ -124,7 +130,12 @@ export default async function Home() {
           />
           <MotionReveal className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
             {newArrivals.items.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                isFavorite={favoriteSlugs.has(product.id)}
+                returnTo="/"
+              />
             ))}
           </MotionReveal>
         </section>
@@ -138,7 +149,12 @@ export default async function Home() {
             />
             <MotionReveal className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
               {bestSellers.items.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  isFavorite={favoriteSlugs.has(product.id)}
+                  returnTo="/"
+                />
               ))}
             </MotionReveal>
           </div>
