@@ -1,7 +1,7 @@
 import "server-only";
 
 import { isAllowedProductImageUrl } from "@/lib/media/images";
-import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { createSupabaseAuthServerClient } from "@/lib/supabase/server";
 
 export type AdminCategory = {
   id: string;
@@ -119,7 +119,7 @@ type ProductRow = {
 };
 
 export async function listAdminCategories(): Promise<AdminCategory[]> {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { data, error } = await supabase
     .from("categories")
     .select("id, slug, name_en, description_en, sort_order, is_active")
@@ -141,7 +141,7 @@ export async function listAdminCategories(): Promise<AdminCategory[]> {
 }
 
 export async function createAdminCategory(input: CategoryFormInput) {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { error } = await supabase.from("categories").insert({
     slug: input.slug,
     name_en: input.name,
@@ -159,7 +159,7 @@ export async function updateAdminCategory(
   categoryId: string,
   input: CategoryFormInput,
 ) {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { error } = await supabase
     .from("categories")
     .update({
@@ -186,7 +186,7 @@ export async function listAdminProducts({
   const limit = DEFAULT_LIMIT;
   const safePage = Math.max(page, 1);
   const offset = (safePage - 1) * limit;
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   let request = supabase
     .from("products")
     .select(getProductSelect(), { count: "exact" })
@@ -225,7 +225,7 @@ export async function listAdminProducts({
 export async function getAdminProductDetail(
   productId: string,
 ): Promise<AdminProductDetail | null> {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { data, error } = await supabase
     .from("products")
     .select(getProductSelect())
@@ -248,7 +248,7 @@ export async function getAdminProductDetail(
 }
 
 export async function createAdminProduct(input: ProductFormInput) {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { data, error } = await supabase
     .from("products")
     .insert({
@@ -291,7 +291,7 @@ export async function updateAdminProduct(
   productId: string,
   input: ProductFormInput,
 ) {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { error } = await supabase
     .from("products")
     .update({
@@ -334,7 +334,7 @@ export async function adjustAdminProductInventory({
   targetStockOnHand: number;
   reason: string;
 }) {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { error } = await supabase.rpc("adjust_product_inventory", {
     product_id_input: productId,
     target_stock_on_hand: targetStockOnHand,
@@ -442,7 +442,7 @@ async function replaceProductImages(
   productId: string,
   images: ProductImageInput[],
 ) {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { error: deleteError } = await supabase
     .from("product_images")
     .delete()

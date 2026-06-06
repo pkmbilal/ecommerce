@@ -1,15 +1,17 @@
 import { notFound } from "next/navigation";
 
+import { TailAdminShell } from "@/components/admin/tailadmin/admin-shell";
+import {
+  AdminPanel,
+  AdminStatusBadge,
+} from "@/components/admin/tailadmin/primitives";
+import { requireAdminSession } from "@/lib/admin/auth";
 import {
   type AdminOrderStatus,
   getAdminOrderDetail,
 } from "@/lib/admin/orders";
+import { formatStatus, getStatusTone } from "@/lib/admin/status";
 import { formatSar } from "@/lib/money";
-import {
-  AdminShell,
-  formatStatus,
-  StatusBadge,
-} from "@/app/admin/orders/page";
 
 type AdminOrderDetailPageProps = {
   params: Promise<{
@@ -28,7 +30,7 @@ const transitionsByStatus: Record<AdminOrderStatus, AdminOrderStatus[]> = {
 export default async function AdminOrderDetailPage({
   params,
 }: AdminOrderDetailPageProps) {
-  const { id } = await params;
+  const [profile, { id }] = await Promise.all([requireAdminSession(), params]);
   const order = await getAdminOrderDetail(id);
 
   if (!order) {
@@ -38,47 +40,50 @@ export default async function AdminOrderDetailPage({
   const transitions = transitionsByStatus[order.status];
 
   return (
-    <AdminShell
+    <TailAdminShell
+      profile={profile}
       title={order.publicOrderId}
       subtitle="Review delivery details, totals, and COD status."
     >
       <div className="grid gap-6 lg:grid-cols-[1fr_0.75fr]">
-        <div className="rounded-lg border border-zinc-200 bg-white p-5">
+        <AdminPanel className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-2xl font-black text-zinc-950">Order items</h2>
-            <StatusBadge status={order.status} />
+            <h2 className="text-xl font-semibold text-gray-900">Order items</h2>
+            <AdminStatusBadge tone={getStatusTone(order.status)}>
+              {formatStatus(order.status)}
+            </AdminStatusBadge>
           </div>
-          <div className="mt-5 divide-y divide-zinc-100">
+          <div className="mt-5 divide-y divide-gray-100">
             {order.items.map((item) => (
               <div key={item.id} className="grid gap-3 py-4 sm:grid-cols-[1fr_auto]">
                 <div>
-                  <p className="font-bold text-zinc-950">{item.productTitle}</p>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="font-semibold text-gray-900">{item.productTitle}</p>
+                  <p className="mt-1 text-sm text-gray-500">
                     SKU {item.productSku} - Qty {item.quantity}
                   </p>
                 </div>
                 <div className="text-left sm:text-right">
-                  <p className="font-black text-zinc-950">
+                  <p className="font-semibold text-gray-900">
                     {formatSar(item.lineSubtotalHalalas)}
                   </p>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="mt-1 text-sm text-gray-500">
                     {formatSar(item.unitPriceHalalas)} each
                   </p>
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-5 space-y-3 border-t border-zinc-200 pt-5 text-sm font-semibold">
+          <div className="mt-5 space-y-3 border-t border-gray-200 pt-5 text-sm font-medium">
             <SummaryRow label="Subtotal" value={formatSar(order.subtotalHalalas)} />
             <SummaryRow label="VAT" value={formatSar(order.vatHalalas)} />
             <SummaryRow label="Delivery" value={formatSar(order.shippingHalalas)} />
             <SummaryRow label="Total" value={formatSar(order.totalHalalas)} strong />
           </div>
-        </div>
+        </AdminPanel>
 
         <aside className="space-y-6">
-          <div className="rounded-lg border border-zinc-200 bg-white p-5">
-            <h2 className="text-xl font-black text-zinc-950">Customer</h2>
+          <AdminPanel className="p-5">
+            <h2 className="text-lg font-semibold text-gray-900">Customer</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <Detail label="Name" value={order.customerName} />
               <Detail label="Phone" value={order.customerPhone} />
@@ -86,10 +91,10 @@ export default async function AdminOrderDetailPage({
               <Detail label="Address" value={order.deliveryAddress} />
               {order.notes ? <Detail label="Notes" value={order.notes} /> : null}
             </dl>
-          </div>
+          </AdminPanel>
 
-          <div className="rounded-lg border border-zinc-200 bg-white p-5">
-            <h2 className="text-xl font-black text-zinc-950">Status actions</h2>
+          <AdminPanel className="p-5">
+            <h2 className="text-lg font-semibold text-gray-900">Status actions</h2>
             {transitions.length > 0 ? (
               <div className="mt-4 grid gap-3">
                 {transitions.map((status) => (
@@ -101,10 +106,10 @@ export default async function AdminOrderDetailPage({
                     <input type="hidden" name="nextStatus" value={status} />
                     <button
                       type="submit"
-                      className={`h-11 w-full rounded-full px-4 text-sm font-bold ${
+                      className={`h-11 w-full rounded-lg px-4 text-sm font-semibold ${
                         status === "cancelled"
-                          ? "bg-rose-600 text-white"
-                          : "bg-zinc-950 text-white"
+                          ? "bg-error-500 text-white"
+                          : "bg-brand-500 text-white"
                       }`}
                     >
                       Mark {formatStatus(status)}
@@ -113,22 +118,22 @@ export default async function AdminOrderDetailPage({
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-sm text-zinc-600">
+              <p className="mt-3 text-sm text-gray-500">
                 This order is finalized and cannot be changed.
               </p>
             )}
-          </div>
+          </AdminPanel>
         </aside>
       </div>
-    </AdminShell>
+    </TailAdminShell>
   );
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="font-bold text-zinc-500">{label}</dt>
-      <dd className="mt-1 font-semibold text-zinc-950">{value}</dd>
+      <dt className="font-medium text-gray-500">{label}</dt>
+      <dd className="mt-1 font-semibold text-gray-900">{value}</dd>
     </div>
   );
 }
@@ -144,8 +149,8 @@ function SummaryRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className={strong ? "text-zinc-950" : "text-zinc-600"}>{label}</span>
-      <span className={strong ? "text-lg font-black text-zinc-950" : "text-zinc-950"}>
+      <span className={strong ? "text-gray-900" : "text-gray-500"}>{label}</span>
+      <span className={strong ? "text-lg font-bold text-gray-900" : "text-gray-900"}>
         {value}
       </span>
     </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AdminShell } from "@/app/admin/orders/page";
+import { TailAdminShell } from "@/components/admin/tailadmin/admin-shell";
 import { ProductForm } from "@/app/admin/products/product-form";
 import { requireAdminSession } from "@/lib/admin/auth";
 import { listAdminCategories } from "@/lib/admin/catalog";
@@ -18,13 +18,14 @@ type NewProductPageProps = {
 export default async function NewProductPage({
   searchParams,
 }: NewProductPageProps) {
-  await requireAdminSession();
+  const profile = await requireAdminSession();
 
   const params = await searchParams;
   const categories = await listAdminCategories();
 
   return (
-    <AdminShell
+    <TailAdminShell
+      profile={profile}
       title="New product"
       subtitle="Create a storefront product with pricing, stock, and media."
     >
@@ -34,7 +35,7 @@ export default async function NewProductPage({
         error={getSingleParam(params.error)}
         mode="create"
       />
-    </AdminShell>
+    </TailAdminShell>
   );
 }
 

@@ -9,7 +9,7 @@ import {
 
 export async function POST(request: Request) {
   if (!(await hasAdminSession())) {
-    return NextResponse.redirect(new URL("/admin/login", request.url), {
+    return NextResponse.redirect(new URL("/login?next=/admin/products", request.url), {
       status: 303,
     });
   }

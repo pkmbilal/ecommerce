@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Enums } from "@/lib/supabase/database.types";
-import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { createSupabaseAuthServerClient } from "@/lib/supabase/server";
 
 export type AdminOrderStatus = Enums<"order_status">;
 
@@ -87,7 +87,7 @@ export async function listAdminOrders(
   const limit = options.limit ?? DEFAULT_LIMIT;
   const page = Math.max(options.page ?? 1, 1);
   const offset = (page - 1) * limit;
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   let query = supabase
     .from("orders")
     .select(
@@ -122,7 +122,7 @@ export async function listAdminOrders(
 export async function getAdminOrderDetail(
   orderId: string,
 ): Promise<AdminOrderDetail | null> {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { data, error } = await supabase
     .from("orders")
     .select(
@@ -189,7 +189,7 @@ export async function transitionAdminOrderStatus(
   orderId: string,
   nextStatus: AdminOrderStatus,
 ) {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseAuthServerClient();
   const { error } = await supabase.rpc("transition_cod_order_status", {
     order_id_input: orderId,
     next_status: nextStatus,
