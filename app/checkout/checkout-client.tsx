@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useCart } from "@/components/cart/cart-provider";
 import type { CartSummary } from "@/lib/cart/types";
 import { formatSar } from "@/lib/money";
+import { calculateOrderTotalHalalas, calculateVatHalalas } from "@/lib/pricing";
 
 type CheckoutResponse = {
   order?: {
@@ -74,11 +75,13 @@ export function CheckoutClient() {
   }, [cartKey, items]);
 
   const estimatedVatHalalas = useMemo(
-    () => Math.round((summary?.estimatedSubtotalHalalas ?? 0) * 0.15),
+    () => calculateVatHalalas(summary?.estimatedSubtotalHalalas ?? 0),
     [summary?.estimatedSubtotalHalalas],
   );
-  const estimatedTotalHalalas =
-    (summary?.estimatedSubtotalHalalas ?? 0) + estimatedVatHalalas;
+  const estimatedTotalHalalas = calculateOrderTotalHalalas({
+    subtotalHalalas: summary?.estimatedSubtotalHalalas ?? 0,
+    vatHalalas: estimatedVatHalalas,
+  });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
