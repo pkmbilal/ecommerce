@@ -129,6 +129,26 @@ export function AdminShell({
           <Link href="/admin/orders" className="text-2xl font-black text-zinc-950">
             SAHA Admin
           </Link>
+          <nav className="hidden items-center gap-2 text-sm font-bold text-zinc-600 md:flex">
+            <Link
+              href="/admin/orders"
+              className="rounded-full px-3 py-2 transition hover:bg-zinc-100 hover:text-zinc-950"
+            >
+              Orders
+            </Link>
+            <Link
+              href="/admin/products"
+              className="rounded-full px-3 py-2 transition hover:bg-zinc-100 hover:text-zinc-950"
+            >
+              Products
+            </Link>
+            <Link
+              href="/admin/categories"
+              className="rounded-full px-3 py-2 transition hover:bg-zinc-100 hover:text-zinc-950"
+            >
+              Categories
+            </Link>
+          </nav>
           <form action="/api/admin/logout" method="post">
             <button
               type="submit"
@@ -141,7 +161,7 @@ export function AdminShell({
       </header>
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <p className="text-sm font-bold uppercase tracking-wide text-emerald-800">
-          Order management
+          Admin workspace
         </p>
         <h1 className="mt-2 text-4xl font-black tracking-tight text-zinc-950">
           {title}

@@ -143,6 +143,25 @@ test("admin status transition migration enforces order flow and releases invento
   assert.match(migration, /'release'/);
 });
 
+test("admin inventory adjustment migration updates stock and writes an audit movement", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260606123000_add_admin_inventory_adjustment_rpc.sql",
+  );
+
+  assert.match(migration, /create or replace function public\.adjust_product_inventory/);
+  assert.match(migration, /for update/);
+  assert.match(
+    migration,
+    /target_stock_on_hand < v_inventory\.reserved_quantity/,
+  );
+  assert.match(migration, /set stock_on_hand = target_stock_on_hand/);
+  assert.match(migration, /'adjustment'/);
+  assert.match(
+    migration,
+    /grant execute on function public\.adjust_product_inventory/,
+  );
+});
+
 function readMigration(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }

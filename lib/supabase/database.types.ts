@@ -333,6 +333,14 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      adjust_product_inventory: {
+        Args: {
+          product_id_input: string;
+          target_stock_on_hand: number;
+          reason_input: string;
+        };
+        Returns: Json;
+      };
       place_cod_order: {
         Args: {
           payload: Json;
