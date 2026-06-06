@@ -6,7 +6,7 @@ import Link from "next/link";
 import { AccountShell } from "@/components/account/account-shell";
 import { AdminPanel } from "@/components/admin/tailadmin/primitives";
 import { QuickAddButton } from "@/components/storefront/quick-add-button";
-import { requireCustomerSession } from "@/lib/admin/auth";
+import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import {
   getCustomerProfile,
   listCustomerFavorites,
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function FavoritesPage() {
-  const session = await requireCustomerSession();
+  const session = await requireCustomerDashboardSession();
   const [profile, favorites] = await Promise.all([
     getCustomerProfile(session.userId),
     listCustomerFavorites(session.userId),

@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { requireCustomerSession } from "@/lib/admin/auth";
+import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import {
   deleteCustomerAddress,
   setDefaultCustomerAddress,
@@ -13,7 +13,7 @@ export async function POST(
   request: Request,
   context: RouteContext<"/api/account/addresses/[id]">,
 ) {
-  const profile = await requireCustomerSession();
+  const profile = await requireCustomerDashboardSession();
   const { id } = await context.params;
   const formData = await request.formData();
   const intent = getText(formData, "intent");

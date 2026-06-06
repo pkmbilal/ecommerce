@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { AccountShell } from "@/components/account/account-shell";
 import { AdminPanel, AdminStatusBadge } from "@/components/admin/tailadmin/primitives";
-import { requireCustomerSession } from "@/lib/admin/auth";
+import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import { formatStatus, getStatusTone } from "@/lib/admin/status";
 import { getCustomerProfile } from "@/lib/customer/account";
 import { getCustomerOrderDetail } from "@/lib/customer/orders";
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const [session, { id }] = await Promise.all([
-    requireCustomerSession(),
+    requireCustomerDashboardSession(),
     params,
   ]);
   const [profile, order] = await Promise.all([

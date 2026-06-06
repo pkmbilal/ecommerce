@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 import { AccountShell } from "@/components/account/account-shell";
 import { AdminPanel, AdminStatusBadge } from "@/components/admin/tailadmin/primitives";
-import { requireCustomerSession } from "@/lib/admin/auth";
+import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import { getCustomerProfile, listCustomerAddresses, type CustomerAddress } from "@/lib/customer/account";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ type AddressesPageProps = {
 
 export default async function AddressesPage({ searchParams }: AddressesPageProps) {
   const [session, params] = await Promise.all([
-    requireCustomerSession(),
+    requireCustomerDashboardSession(),
     searchParams,
   ]);
   const [profile, addresses] = await Promise.all([

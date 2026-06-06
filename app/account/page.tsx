@@ -8,7 +8,7 @@ import {
   AdminStatCard,
   AdminStatusBadge,
 } from "@/components/admin/tailadmin/primitives";
-import { requireCustomerSession } from "@/lib/admin/auth";
+import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import { formatStatus, getStatusTone } from "@/lib/admin/status";
 import {
   getCustomerProfile,
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AccountPage() {
-  const session = await requireCustomerSession();
+  const session = await requireCustomerDashboardSession();
   const [profile, addresses, favorites, orders] = await Promise.all([
     getCustomerProfile(session.userId),
     listCustomerAddresses(session.userId),

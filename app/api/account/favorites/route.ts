@@ -20,6 +20,10 @@ export async function POST(request: Request) {
     return NextResponse.redirect(loginUrl, { status: 303 });
   }
 
+  if (profile.role === "admin") {
+    return NextResponse.redirect(new URL("/admin", request.url), { status: 303 });
+  }
+
   const intent = getText(formData, "intent");
 
   if (intent === "remove") {

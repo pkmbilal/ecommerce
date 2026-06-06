@@ -218,6 +218,11 @@ test("role based login redirects to safe dashboards", () => {
     getSafeRoleRedirectPath("admin", "/admin/products"),
     "/admin/products",
   );
+  assert.equal(getSafeRoleRedirectPath("admin", "/account"), "/admin");
+  assert.equal(
+    getSafeRoleRedirectPath("admin", "/account/orders"),
+    "/admin",
+  );
   assert.equal(
     getSafeRoleRedirectPath("customer", "/admin/orders"),
     "/account",

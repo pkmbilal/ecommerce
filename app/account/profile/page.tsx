@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AccountShell } from "@/components/account/account-shell";
 import { AdminPanel } from "@/components/admin/tailadmin/primitives";
-import { requireCustomerSession } from "@/lib/admin/auth";
+import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import { getCustomerProfile } from "@/lib/customer/account";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ type ProfilePageProps = {
 
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const [session, params] = await Promise.all([
-    requireCustomerSession(),
+    requireCustomerDashboardSession(),
     searchParams,
   ]);
   const profile = await getCustomerProfile(session.userId);

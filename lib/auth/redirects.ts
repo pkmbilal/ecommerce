@@ -21,9 +21,7 @@ export function getSafeRoleRedirectPath(
   }
 
   if (role === "admin") {
-    return safePath === "/admin" ||
-      safePath.startsWith("/admin/") ||
-      safePath === "/account"
+    return safePath === "/admin" || safePath.startsWith("/admin/")
       ? safePath
       : fallback;
   }

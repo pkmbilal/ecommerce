@@ -1,12 +1,12 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { requireCustomerSession } from "@/lib/admin/auth";
+import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import { updateCustomerProfile } from "@/lib/customer/account";
 import { validateProfileForm } from "@/lib/customer/validation";
 
 export async function POST(request: Request) {
-  const profile = await requireCustomerSession();
+  const profile = await requireCustomerDashboardSession();
   const formData = await request.formData();
   const validation = validateProfileForm(formData);
 

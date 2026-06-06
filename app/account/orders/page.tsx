@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { AccountShell } from "@/components/account/account-shell";
 import { AdminPanel, AdminStatusBadge } from "@/components/admin/tailadmin/primitives";
-import { requireCustomerSession } from "@/lib/admin/auth";
+import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import { formatStatus, getStatusTone } from "@/lib/admin/status";
 import { getCustomerProfile } from "@/lib/customer/account";
 import { listCustomerOrders } from "@/lib/customer/orders";
@@ -21,7 +21,7 @@ type OrdersPageProps = {
 
 export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const [session, params] = await Promise.all([
-    requireCustomerSession(),
+    requireCustomerDashboardSession(),
     searchParams,
   ]);
   const page = parsePage(getSingleParam(params.page));

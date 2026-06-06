@@ -43,6 +43,16 @@ export async function requireCustomerSession() {
   return profile;
 }
 
+export async function requireCustomerDashboardSession() {
+  const profile = await requireCustomerSession();
+
+  if (profile.role === "admin") {
+    redirect("/admin");
+  }
+
+  return profile;
+}
+
 export async function hasAdminSession() {
   const profile = await getCurrentProfile();
 
