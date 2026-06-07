@@ -53,6 +53,21 @@ export type AdminProductList = {
   hasNextPage: boolean;
 };
 
+export type AdminProductStatusFilter = "active" | "inactive";
+export type AdminProductFeaturedFilter = "featured" | "standard";
+export type AdminProductStockFilter = "in_stock" | "out_of_stock" | "reserved";
+export type AdminProductMediaFilter = "with_image" | "missing_image";
+export type AdminProductSort = "newest" | "title_asc" | "price_asc" | "price_desc" | "stock_asc";
+
+export type AdminProductFilters = {
+  status?: AdminProductStatusFilter;
+  featured?: AdminProductFeaturedFilter;
+  categoryId?: string;
+  stock?: AdminProductStockFilter;
+  media?: AdminProductMediaFilter;
+  sort?: AdminProductSort;
+};
+
 export type CategoryFormInput = {
   slug: string;
   name: string;
@@ -180,18 +195,23 @@ export async function updateAdminCategory(
 export async function listAdminProducts({
   page = 1,
   query,
+  filters = {},
 }: {
   page?: number;
   query?: string;
+  filters?: AdminProductFilters;
 } = {}): Promise<AdminProductList> {
   const limit = DEFAULT_LIMIT;
   const safePage = Math.max(page, 1);
   const offset = (safePage - 1) * limit;
   const supabase = await createSupabaseAuthServerClient();
+  const productSelect = getProductSelect({
+    requireInventory: Boolean(filters.stock) || filters.sort === "stock_asc",
+    requireImage: filters.media === "with_image",
+  });
   let request = supabase
     .from("products")
-    .select(getProductSelect(), { count: "exact" })
-    .order("created_at", { ascending: false })
+    .select(productSelect, { count: "exact" })
     .order("position", {
       referencedTable: "product_images",
       ascending: true,
@@ -203,6 +223,57 @@ export async function listAdminProducts({
     request = request.or(
       `title_en.ilike.%${term}%,sku.ilike.%${term}%,slug.ilike.%${term}%`,
     );
+  }
+
+  if (filters.status === "active") {
+    request = request.eq("is_active", true);
+  } else if (filters.status === "inactive") {
+    request = request.eq("is_active", false);
+  }
+
+  if (filters.featured === "featured") {
+    request = request.eq("is_featured", true);
+  } else if (filters.featured === "standard") {
+    request = request.eq("is_featured", false);
+  }
+
+  if (filters.categoryId === "unassigned") {
+    request = request.is("category_id", null);
+  } else if (filters.categoryId) {
+    request = request.eq("category_id", filters.categoryId);
+  }
+
+  if (filters.stock === "in_stock") {
+    request = request.gt("inventory_items.stock_on_hand", 0);
+  } else if (filters.stock === "out_of_stock") {
+    request = request.eq("inventory_items.stock_on_hand", 0);
+  } else if (filters.stock === "reserved") {
+    request = request.gt("inventory_items.reserved_quantity", 0);
+  }
+
+  if (filters.media === "missing_image") {
+    request = request.is("product_images", null);
+  }
+
+  switch (filters.sort) {
+    case "title_asc":
+      request = request.order("title_en", { ascending: true });
+      break;
+    case "price_asc":
+      request = request.order("price_halalas", { ascending: true });
+      break;
+    case "price_desc":
+      request = request.order("price_halalas", { ascending: false });
+      break;
+    case "stock_asc":
+      request = request.order("inventory_items(stock_on_hand)", {
+        ascending: true,
+      });
+      break;
+    case "newest":
+    default:
+      request = request.order("created_at", { ascending: false });
+      break;
   }
 
   const { data, error, count } = await request;
@@ -477,7 +548,18 @@ async function replaceProductImages(
   }
 }
 
-function getProductSelect() {
+function getProductSelect({
+  requireInventory = false,
+  requireImage = false,
+}: {
+  requireInventory?: boolean;
+  requireImage?: boolean;
+} = {}) {
+  const inventoryRelation = requireInventory
+    ? "inventory_items!inner"
+    : "inventory_items";
+  const imageRelation = requireImage ? "product_images!inner" : "product_images";
+
   return `
     id,
     slug,
@@ -492,8 +574,8 @@ function getProductSelect() {
     is_active,
     is_featured,
     categories(name_en),
-    inventory_items(stock_on_hand, reserved_quantity, low_stock_threshold),
-    product_images(id, url, alt_en, position, is_primary)
+    ${inventoryRelation}(stock_on_hand, reserved_quantity, low_stock_threshold),
+    ${imageRelation}(id, url, alt_en, position, is_primary)
   `;
 }
 
