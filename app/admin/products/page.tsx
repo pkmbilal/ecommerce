@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Form from "next/form";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { TailAdminShell } from "@/components/admin/tailadmin/admin-shell";
 import {
@@ -32,7 +34,6 @@ export default async function AdminProductsPage({
   const page = parsePage(getSingleParam(params.page));
   const query = getSingleParam(params.q)?.trim();
   const saved = getSingleParam(params.saved);
-  const products = await listAdminProducts({ page, query });
 
   return (
     <TailAdminShell
@@ -54,7 +55,11 @@ export default async function AdminProductsPage({
             Product {saved === "created" ? "created" : "updated"} successfully.
           </p>
         ) : null}
-        <form action="/admin/products" className="flex min-w-0 flex-1 gap-2">
+        <Form
+          action="/admin/products"
+          scroll={false}
+          className="flex min-w-0 flex-1 gap-2"
+        >
           <input
             type="search"
             name="q"
@@ -68,9 +73,30 @@ export default async function AdminProductsPage({
           >
             Search
           </button>
-        </form>
+        </Form>
       </div>
 
+      <Suspense
+        key={`${query ?? ""}:${page}`}
+        fallback={<AdminProductsResultsSkeleton />}
+      >
+        <AdminProductsResults query={query} page={page} />
+      </Suspense>
+    </TailAdminShell>
+  );
+}
+
+async function AdminProductsResults({
+  query,
+  page,
+}: {
+  query?: string;
+  page: number;
+}) {
+  const products = await listAdminProducts({ page, query });
+
+  return (
+    <>
       <AdminPanel className="mt-6 overflow-hidden">
         <div className="grid grid-cols-[1.4fr_0.8fr_0.7fr_0.7fr_0.5fr] gap-4 border-b border-gray-200 bg-gray-50 px-5 py-3 text-xs font-medium uppercase text-gray-500 max-lg:hidden">
           <span>Product</span>
@@ -141,6 +167,7 @@ export default async function AdminProductsPage({
         {products.page > 1 ? (
           <Link
             href={buildPageHref(query, products.page - 1)}
+            scroll={false}
             className="rounded-lg border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-900"
           >
             Previous
@@ -149,13 +176,58 @@ export default async function AdminProductsPage({
         {products.hasNextPage ? (
           <Link
             href={buildPageHref(query, products.page + 1)}
+            scroll={false}
             className="rounded-lg bg-brand-500 px-5 py-3 text-sm font-semibold text-white"
           >
             Next page
           </Link>
         ) : null}
       </div>
-    </TailAdminShell>
+    </>
+  );
+}
+
+function AdminProductsResultsSkeleton() {
+  return (
+    <>
+      <AdminPanel className="mt-6 overflow-hidden" aria-busy="true">
+        <div className="grid grid-cols-[1.4fr_0.8fr_0.7fr_0.7fr_0.5fr] gap-4 border-b border-gray-200 bg-gray-50 px-5 py-3 text-xs font-medium uppercase text-gray-500 max-lg:hidden">
+          <span>Product</span>
+          <span>Category</span>
+          <span>Stock</span>
+          <span>Price</span>
+          <span>Status</span>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {Array.from({ length: 5 }, (_, index) => (
+            <div
+              key={index}
+              className="grid gap-4 px-5 py-4 lg:grid-cols-[1.4fr_0.8fr_0.7fr_0.7fr_0.5fr] lg:items-center"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="size-14 shrink-0 animate-pulse rounded-lg bg-gray-100" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-4 w-48 max-w-full animate-pulse rounded bg-gray-100" />
+                  <div className="mt-3 h-3 w-32 max-w-full animate-pulse rounded bg-gray-100" />
+                </div>
+              </div>
+              <div className="h-4 w-28 animate-pulse rounded bg-gray-100" />
+              <div className="space-y-2">
+                <div className="h-4 w-20 animate-pulse rounded bg-gray-100" />
+                <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />
+              </div>
+              <div className="h-4 w-20 animate-pulse rounded bg-gray-100" />
+              <div className="h-6 w-16 animate-pulse rounded-full bg-gray-100" />
+            </div>
+          ))}
+        </div>
+      </AdminPanel>
+
+      <div className="mt-8 flex justify-center gap-3">
+        <div className="h-11 w-24 animate-pulse rounded-lg bg-gray-100" />
+        <div className="h-11 w-28 animate-pulse rounded-lg bg-gray-100" />
+      </div>
+    </>
   );
 }
 
