@@ -18,6 +18,9 @@ const {
   getSafeInternalPath,
   getSafeRoleRedirectPath,
 } = require("../lib/auth/redirects.ts");
+const {
+  validateProductImageFile,
+} = require("../lib/media/product-image-files.ts");
 
 const root = path.resolve(__dirname, "..");
 
@@ -311,6 +314,34 @@ test("rejects invalid customer dashboard forms", () => {
       "recipientName",
     ]);
   }
+});
+
+test("validates admin product image files", () => {
+  const validFile = new File(["image-bytes"], "product.webp", {
+    type: "image/webp",
+  });
+
+  assert.doesNotThrow(() => validateProductImageFile(validFile));
+
+  const unsupportedFile = new File(["image-bytes"], "product.gif", {
+    type: "image/gif",
+  });
+
+  assert.throws(
+    () => validateProductImageFile(unsupportedFile),
+    /JPEG, PNG, WebP, or AVIF/,
+  );
+
+  const oversizedFile = new File(
+    [new Uint8Array((5 * 1024 * 1024) + 1)],
+    "product.jpg",
+    { type: "image/jpeg" },
+  );
+
+  assert.throws(
+    () => validateProductImageFile(oversizedFile),
+    /5 MB or smaller/,
+  );
 });
 
 test("customer dashboard migration adds owned addresses favorites and linked orders", () => {

@@ -15,10 +15,11 @@ export async function POST(request: Request) {
   }
 
   const formData = await request.formData();
-  let productId: string;
 
   try {
-    productId = await createAdminProduct(parseProductFormData(formData, "create"));
+    await createAdminProduct(
+      await parseProductFormData(formData, "create"),
+    );
   } catch (error) {
     const url = new URL("/admin/products/new", request.url);
     url.searchParams.set(
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
   revalidatePath("/products");
   revalidatePath("/admin/products");
 
-  return NextResponse.redirect(new URL(`/admin/products/${productId}?saved=1`, request.url), {
+  return NextResponse.redirect(new URL("/admin/products?saved=created", request.url), {
     status: 303,
   });
 }

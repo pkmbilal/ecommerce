@@ -19,6 +19,7 @@ type AdminProductsPageProps = {
   searchParams: Promise<{
     page?: string | string[];
     q?: string | string[];
+    saved?: string | string[];
   }>;
 };
 
@@ -30,6 +31,7 @@ export default async function AdminProductsPage({
   const params = await searchParams;
   const page = parsePage(getSingleParam(params.page));
   const query = getSingleParam(params.q)?.trim();
+  const saved = getSingleParam(params.saved);
   const products = await listAdminProducts({ page, query });
 
   return (
@@ -47,6 +49,11 @@ export default async function AdminProductsPage({
       }
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {saved === "created" || saved === "updated" ? (
+          <p className="rounded-lg bg-success-50 px-3 py-2 text-sm font-medium text-success-700">
+            Product {saved === "created" ? "created" : "updated"} successfully.
+          </p>
+        ) : null}
         <form action="/admin/products" className="flex min-w-0 flex-1 gap-2">
           <input
             type="search"

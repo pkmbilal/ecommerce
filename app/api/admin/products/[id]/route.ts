@@ -21,7 +21,7 @@ export async function POST(
   const formData = await request.formData();
 
   try {
-    await updateAdminProduct(id, parseProductFormData(formData, "update"));
+    await updateAdminProduct(id, await parseProductFormData(formData, "update"));
   } catch (error) {
     const url = new URL(`/admin/products/${id}`, request.url);
     url.searchParams.set(
@@ -38,7 +38,7 @@ export async function POST(
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
 
-  return NextResponse.redirect(new URL(`/admin/products/${id}?saved=1`, request.url), {
+  return NextResponse.redirect(new URL("/admin/products?saved=updated", request.url), {
     status: 303,
   });
 }
