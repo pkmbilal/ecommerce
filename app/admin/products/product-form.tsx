@@ -3,6 +3,7 @@ import type {
   AdminProductDetail,
 } from "@/lib/admin/catalog";
 import { AdminPanel } from "@/components/admin/tailadmin/primitives";
+import { ProductFormDraft } from "@/app/admin/products/product-form-draft";
 
 type ProductFormProps = {
   action: string;
@@ -26,8 +27,11 @@ export function ProductForm({
       <form
         action={action}
         method="post"
+        encType="multipart/form-data"
+        data-product-form={mode}
         className="rounded-lg border border-gray-200 bg-white p-5 shadow-theme-sm sm:p-6"
       >
+        {mode === "create" ? <ProductFormDraft restore={Boolean(error)} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-gray-900">
             {mode === "create" ? "Product details" : "Edit product"}
@@ -119,8 +123,8 @@ export function ProductForm({
         <div className="mt-7 border-t border-gray-200 pt-6">
           <h3 className="text-lg font-semibold text-gray-900">Product images</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Use approved HTTPS media URLs. The first completed image becomes
-            primary unless another primary option is selected.
+            Upload JPEG, PNG, WebP, or AVIF files up to 5 MB. The first
+            completed image becomes primary unless another option is selected.
           </p>
           <div className="mt-5 grid gap-4">
             {Array.from({ length: 4 }, (_, index) => {
@@ -131,11 +135,7 @@ export function ProductForm({
                   key={index}
                   className="grid gap-3 rounded-lg border border-gray-200 p-4 md:grid-cols-[1fr_1fr_auto]"
                 >
-                  <Field
-                    label={`Image ${index + 1} URL`}
-                    name={`imageUrl${index}`}
-                    defaultValue={image?.url}
-                  />
+                  <ImageFileField index={index} image={image} />
                   <Field
                     label="Alt text"
                     name={`imageAlt${index}`}
@@ -215,6 +215,36 @@ export function ProductForm({
         </AdminPanel>
       </aside>
     </div>
+  );
+}
+
+function ImageFileField({
+  index,
+  image,
+}: {
+  index: number;
+  image?: AdminProductDetail["images"][number];
+}) {
+  return (
+    <label className="grid gap-2 text-sm font-medium text-gray-700">
+      {`Image ${index + 1} file`}
+      <input
+        type="hidden"
+        name={`existingImageUrl${index}`}
+        value={image?.url ?? ""}
+      />
+      <input
+        type="file"
+        name={`imageFile${index}`}
+        accept="image/jpeg,image/png,image/webp,image/avif"
+        className="block min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-gray-800 hover:file:bg-gray-200 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10"
+      />
+      {image ? (
+        <span className="text-xs font-medium text-gray-500">
+          Current image will be kept unless a new file is selected.
+        </span>
+      ) : null}
+    </label>
   );
 }
 

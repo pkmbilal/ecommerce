@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isAllowedProductImageUrl } from "@/lib/media/images";
+import { uploadProductImageToR2 } from "@/lib/media/r2-upload";
 import { createSupabaseAuthServerClient } from "@/lib/supabase/server";
 
 export type AdminCategory = {
@@ -369,10 +370,10 @@ export function parseCategoryFormData(formData: FormData): CategoryFormInput {
   return input;
 }
 
-export function parseProductFormData(
+export async function parseProductFormData(
   formData: FormData,
   mode: "create" | "update",
-): ProductFormInput {
+): Promise<ProductFormInput> {
   const input: ProductFormInput = {
     slug: requireText(formData, "slug"),
     sku: requireText(formData, "sku").toUpperCase(),
@@ -400,7 +401,7 @@ export function parseProductFormData(
             fallback: 0,
           })
         : undefined,
-    images: parseProductImages(formData),
+    images: [],
   };
 
   if (!SLUG_PATTERN.test(input.slug)) {
@@ -421,6 +422,8 @@ export function parseProductFormData(
   ) {
     throw new Error("Compare-at price must be greater than or equal to price.");
   }
+
+  input.images = await parseProductImages(formData, input.slug);
 
   return input;
 }
@@ -540,12 +543,19 @@ function mapProductDetail(row: ProductRow): AdminProductDetail {
   };
 }
 
-function parseProductImages(formData: FormData): ProductImageInput[] {
+export async function parseProductImages(
+  formData: FormData,
+  productSlug: string,
+): Promise<ProductImageInput[]> {
   const images: ProductImageInput[] = [];
 
   for (let index = 0; index < 4; index += 1) {
-    const url = optionalText(formData, `imageUrl${index}`);
+    const file = getOptionalFile(formData, `imageFile${index}`);
+    const existingUrl = optionalText(formData, `existingImageUrl${index}`);
     const alt = optionalText(formData, `imageAlt${index}`);
+    const url = file
+      ? await uploadProductImageToR2({ file, productSlug, slot: index })
+      : existingUrl;
 
     if (!url && !alt) {
       continue;
@@ -568,6 +578,20 @@ function parseProductImages(formData: FormData): ProductImageInput[] {
   }
 
   return images;
+}
+
+function getOptionalFile(formData: FormData, name: string) {
+  const value = formData.get(name);
+
+  if (
+    typeof File === "undefined" ||
+    !(value instanceof File) ||
+    value.size === 0
+  ) {
+    return undefined;
+  }
+
+  return value;
 }
 
 function parseMoneyHalalas(value: FormDataEntryValue | null) {
