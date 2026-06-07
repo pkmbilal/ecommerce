@@ -2,6 +2,7 @@
 
 // Adapted from TailAdmin free-nextjs-admin-dashboard (MIT).
 import { Menu, MoreHorizontal, Search, X } from "lucide-react";
+import Form from "next/form";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -65,7 +66,7 @@ export function TailAdminHeader({ email, fullName }: TailAdminHeaderProps) {
           </button>
 
           <div className="hidden lg:block">
-            <form action="/admin/products">
+            <Form action="/admin/products" scroll={false}>
               <div className="relative">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                   <Search className="size-5" />
@@ -81,7 +82,7 @@ export function TailAdminHeader({ email, fullName }: TailAdminHeaderProps) {
                   Ctrl K
                 </span>
               </div>
-            </form>
+            </Form>
           </div>
         </div>
 
