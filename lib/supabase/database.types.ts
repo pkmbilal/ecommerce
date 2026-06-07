@@ -126,6 +126,7 @@ export type Database = {
       };
       inventory_items: {
         Row: {
+          is_low_stock: boolean;
           low_stock_threshold: number;
           product_id: string;
           reserved_quantity: number;
@@ -133,6 +134,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          is_low_stock?: never;
           low_stock_threshold?: number;
           product_id: string;
           reserved_quantity?: number;

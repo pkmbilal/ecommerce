@@ -23,6 +23,7 @@ export type AdminProductSummary = {
   compareAtPriceHalalas?: number;
   stockOnHand: number;
   reservedQuantity: number;
+  isLowStock: boolean;
   isActive: boolean;
   isFeatured: boolean;
   imageUrl?: string;
@@ -55,7 +56,11 @@ export type AdminProductList = {
 
 export type AdminProductStatusFilter = "active" | "inactive";
 export type AdminProductFeaturedFilter = "featured" | "standard";
-export type AdminProductStockFilter = "in_stock" | "out_of_stock" | "reserved";
+export type AdminProductStockFilter =
+  | "in_stock"
+  | "out_of_stock"
+  | "reserved"
+  | "low_stock";
 export type AdminProductMediaFilter = "with_image" | "missing_image";
 export type AdminProductSort = "newest" | "title_asc" | "price_asc" | "price_desc" | "stock_asc";
 
@@ -124,6 +129,7 @@ type ProductRow = {
     stock_on_hand: number;
     reserved_quantity: number;
     low_stock_threshold: number;
+    is_low_stock: boolean;
   } | null;
   product_images: {
     id: string;
@@ -249,6 +255,8 @@ export async function listAdminProducts({
     request = request.eq("inventory_items.stock_on_hand", 0);
   } else if (filters.stock === "reserved") {
     request = request.gt("inventory_items.reserved_quantity", 0);
+  } else if (filters.stock === "low_stock") {
+    request = request.eq("inventory_items.is_low_stock", true);
   }
 
   if (filters.media === "missing_image") {
@@ -574,7 +582,7 @@ function getProductSelect({
     is_active,
     is_featured,
     categories(name_en),
-    ${inventoryRelation}(stock_on_hand, reserved_quantity, low_stock_threshold),
+    ${inventoryRelation}(stock_on_hand, reserved_quantity, low_stock_threshold, is_low_stock),
     ${imageRelation}(id, url, alt_en, position, is_primary)
   `;
 }
@@ -594,6 +602,7 @@ function mapProductSummary(row: ProductRow): AdminProductSummary {
     compareAtPriceHalalas: row.compare_at_price_halalas ?? undefined,
     stockOnHand: inventory?.stock_on_hand ?? 0,
     reservedQuantity: inventory?.reserved_quantity ?? 0,
+    isLowStock: inventory?.is_low_stock ?? false,
     isActive: row.is_active,
     isFeatured: row.is_featured,
     imageUrl: isAllowedProductImageUrl(primaryImage?.url)

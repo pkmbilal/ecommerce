@@ -168,6 +168,7 @@ function ProductFilterBar({
             ["", "All stock"],
             ["in_stock", "In stock"],
             ["out_of_stock", "Out of stock"],
+            ["low_stock", "Low stock"],
             ["reserved", "Reserved"],
           ]}
         />
@@ -298,9 +299,16 @@ async function AdminProductsResults({
               </p>
               <div className="text-sm font-medium text-gray-700">
                 <p>{product.stockOnHand} on hand</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  {product.reservedQuantity} reserved
-                </p>
+                <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                  <span className="text-gray-500">
+                    {product.reservedQuantity} reserved
+                  </span>
+                  {product.isLowStock ? (
+                    <span className="font-semibold text-warning-500">
+                      Low stock
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <p className="font-semibold text-gray-900">
                 {formatSar(product.priceHalalas)}
@@ -469,6 +477,7 @@ function parseAdminProductFilters(
   const stock = parseOneOf<AdminProductStockFilter>(getSingleParam(params.stock), [
     "in_stock",
     "out_of_stock",
+    "low_stock",
     "reserved",
   ]);
   const media = parseOneOf<AdminProductMediaFilter>(getSingleParam(params.media), [
