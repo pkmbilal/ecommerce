@@ -405,6 +405,29 @@ export async function updateAdminProduct(
   await replaceProductImages(productId, input.images);
 }
 
+export async function setAdminProductActive(
+  productId: string,
+  isActive: boolean,
+) {
+  const supabase = await createSupabaseAuthServerClient();
+  const { data, error } = await supabase
+    .from("products")
+    .update({ is_active: isActive })
+    .eq("id", productId)
+    .select("slug")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update product status: ${error.message}`);
+  }
+
+  return { slug: data.slug };
+}
+
+export async function archiveAdminProduct(productId: string) {
+  return setAdminProductActive(productId, false);
+}
+
 export async function adjustAdminProductInventory({
   productId,
   targetStockOnHand,
