@@ -75,6 +75,7 @@ export function CheckoutClient({
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [idempotencyKey] = useState(createIdempotencyKey);
   const summary = summaryState.key === cartKey ? summaryState.summary : null;
   const isSummaryLoading = items.length > 0 && summaryState.key !== cartKey;
@@ -160,6 +161,7 @@ export function CheckoutClient({
         `saha-order-${payload.order.publicOrderId}`,
         JSON.stringify(payload.order),
       );
+      setIsRedirecting(true);
       clearCart();
       window.location.assign(
         `/order-confirmation?order=${encodeURIComponent(
@@ -169,8 +171,27 @@ export function CheckoutClient({
     } catch {
       setErrors({ order: "Unable to place order. Try again shortly." });
     } finally {
-      setIsSubmitting(false);
+      if (!isRedirecting) {
+        setIsSubmitting(false);
+      }
     }
+  }
+
+  if (isRedirecting) {
+    return (
+      <div className="mt-10 rounded-lg border border-zinc-200 bg-white p-8 text-center">
+        <Loader2
+          aria-hidden="true"
+          className="mx-auto size-10 animate-spin text-emerald-700"
+        />
+        <h2 className="mt-4 text-2xl font-black text-zinc-950">
+          Redirecting to confirmation
+        </h2>
+        <p className="mt-2 text-zinc-600">
+          Your COD order was created. We are opening your confirmation page.
+        </p>
+      </div>
+    );
   }
 
   if (items.length === 0) {
