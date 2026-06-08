@@ -59,8 +59,12 @@ Suggested branch: `feature/rate-limiting-security`
   actions, and product search once search is implemented.
 - Strengthen admin authentication beyond a single shared env token before public
   launch.
+- Enable Supabase Auth leaked password protection from the dashboard when the
+  project plan supports it.
 - Review route handlers for structured errors that do not leak database details.
 - Confirm privileged Supabase clients are imported only by server-only modules.
+- Keep RLS policies consolidated so Supabase Advisor does not report overlapping
+  permissive policies for the same role/action.
 
 Acceptance checks:
 
