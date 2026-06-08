@@ -63,6 +63,14 @@ export type AdminProductStockFilter =
   | "low_stock";
 export type AdminProductMediaFilter = "with_image" | "missing_image";
 export type AdminProductSort = "newest" | "title_asc" | "price_asc" | "price_desc" | "stock_asc";
+export type AdminProductBulkAction =
+  | "activate"
+  | "deactivate"
+  | "archive"
+  | "feature"
+  | "unfeature"
+  | "assign_category"
+  | "set_stock";
 
 export type AdminProductFilters = {
   status?: AdminProductStatusFilter;
@@ -103,6 +111,14 @@ export type ProductImageInput = {
   alt: string;
   position: number;
   isPrimary: boolean;
+};
+
+export type AdminProductBulkInput = {
+  action: AdminProductBulkAction;
+  productIds: string[];
+  categoryId?: string;
+  targetStockOnHand?: number;
+  reason?: string;
 };
 
 const DEFAULT_LIMIT = 20;
@@ -449,6 +465,40 @@ export async function adjustAdminProductInventory({
   }
 }
 
+export async function applyAdminProductBulkAction(input: AdminProductBulkInput) {
+  const productIds = Array.from(new Set(input.productIds));
+
+  if (productIds.length === 0) {
+    throw new Error("Select at least one product.");
+  }
+
+  if (input.action === "set_stock") {
+    if (input.targetStockOnHand === undefined || !input.reason) {
+      throw new Error("Target stock and reason are required.");
+    }
+
+    for (const productId of productIds) {
+      await adjustAdminProductInventory({
+        productId,
+        targetStockOnHand: input.targetStockOnHand,
+        reason: input.reason,
+      });
+    }
+
+    return;
+  }
+
+  const supabase = await createSupabaseAuthServerClient();
+  const { error } = await supabase
+    .from("products")
+    .update(getBulkProductUpdate(input))
+    .in("id", productIds);
+
+  if (error) {
+    throw new Error(`Failed to update selected products: ${error.message}`);
+  }
+}
+
 export function parseCategoryFormData(formData: FormData): CategoryFormInput {
   const input = {
     slug: requireText(formData, "slug"),
@@ -543,6 +593,50 @@ export function parseInventoryAdjustmentFormData(formData: FormData) {
   return { targetStockOnHand, reason };
 }
 
+export function parseProductBulkActionFormData(
+  formData: FormData,
+): AdminProductBulkInput {
+  const action = parseBulkAction(formData.get("bulkAction"));
+  const productIds = formData
+    .getAll("productId")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (productIds.length === 0) {
+    throw new Error("Select at least one product.");
+  }
+
+  if (productIds.length > 100) {
+    throw new Error("Bulk actions are limited to 100 products at a time.");
+  }
+
+  if (action === "assign_category") {
+    const categoryId = optionalText(formData, "categoryId");
+
+    if (!categoryId) {
+      throw new Error("Choose a category for the selected products.");
+    }
+
+    return { action, productIds, categoryId };
+  }
+
+  if (action === "set_stock") {
+    const targetStockOnHand = parseIntegerField(formData, "targetStockOnHand", {
+      min: 0,
+    });
+    const reason = requireText(formData, "reason");
+
+    if (reason.length < 3) {
+      throw new Error("Inventory adjustment reason is required.");
+    }
+
+    return { action, productIds, targetStockOnHand, reason };
+  }
+
+  return { action, productIds };
+}
+
 async function replaceProductImages(
   productId: string,
   images: ProductImageInput[],
@@ -577,6 +671,46 @@ async function replaceProductImages(
   if (insertError) {
     throw new Error(`Failed to save product images: ${insertError.message}`);
   }
+}
+
+function getBulkProductUpdate(input: AdminProductBulkInput) {
+  switch (input.action) {
+    case "activate":
+      return { is_active: true };
+    case "deactivate":
+    case "archive":
+      return { is_active: false };
+    case "feature":
+      return { is_featured: true };
+    case "unfeature":
+      return { is_featured: false };
+    case "assign_category":
+      return { category_id: input.categoryId };
+    case "set_stock":
+      throw new Error("Stock updates must use inventory adjustment.");
+    default:
+      return assertNever(input.action);
+  }
+}
+
+function parseBulkAction(value: FormDataEntryValue | null): AdminProductBulkAction {
+  if (
+    value === "activate" ||
+    value === "deactivate" ||
+    value === "archive" ||
+    value === "feature" ||
+    value === "unfeature" ||
+    value === "assign_category" ||
+    value === "set_stock"
+  ) {
+    return value;
+  }
+
+  throw new Error("Choose a valid bulk action.");
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unsupported bulk action: ${value}`);
 }
 
 function getProductSelect({

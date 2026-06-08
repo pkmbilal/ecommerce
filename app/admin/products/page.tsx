@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
 import Form from "next/form";
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { ConfirmSubmitButton } from "@/app/admin/products/confirm-submit-button";
-import { ProductStatusToggle } from "@/app/admin/products/product-status-toggle";
+import { ProductBulkActions } from "@/app/admin/products/product-bulk-actions";
 import { TailAdminShell } from "@/components/admin/tailadmin/admin-shell";
-import {
-  AdminPanel,
-  AdminStatusBadge,
-} from "@/components/admin/tailadmin/primitives";
+import { AdminPanel } from "@/components/admin/tailadmin/primitives";
 import { requireAdminSession } from "@/lib/admin/auth";
 import {
   listAdminCategories,
   listAdminProducts,
   type AdminCategory,
-  type AdminProductSummary,
   type AdminProductFeaturedFilter,
   type AdminProductFilters,
   type AdminProductMediaFilter,
@@ -24,7 +18,6 @@ import {
   type AdminProductStatusFilter,
   type AdminProductStockFilter,
 } from "@/lib/admin/catalog";
-import { formatSar } from "@/lib/money";
 
 export const metadata: Metadata = {
   title: "Admin Products | SAHA",
@@ -35,6 +28,7 @@ type AdminProductsPageProps = {
     page?: string | string[];
     q?: string | string[];
     saved?: string | string[];
+    error?: string | string[];
     status?: string | string[];
     featured?: string | string[];
     category?: string | string[];
@@ -53,6 +47,7 @@ export default async function AdminProductsPage({
   const page = parsePage(getSingleParam(params.page));
   const query = getSingleParam(params.q)?.trim();
   const saved = getSingleParam(params.saved);
+  const error = getSingleParam(params.error);
   const categories = await listAdminCategories();
   const filters = parseAdminProductFilters(params);
 
@@ -71,11 +66,7 @@ export default async function AdminProductsPage({
       }
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {saved ? (
-          <p className="rounded-lg bg-success-50 px-3 py-2 text-sm font-medium text-success-700">
-            {getSavedMessage(saved)}
-          </p>
-        ) : null}
+        <StatusMessage saved={saved} error={error} />
         <Form
           action="/admin/products"
           scroll={false}
@@ -108,7 +99,12 @@ export default async function AdminProductsPage({
         key={`${query ?? ""}:${page}:${getFilterKey(filters)}`}
         fallback={<AdminProductsResultsSkeleton />}
       >
-        <AdminProductsResults query={query} page={page} filters={filters} />
+        <AdminProductsResults
+          query={query}
+          page={page}
+          filters={filters}
+          categories={categories}
+        />
       </Suspense>
     </TailAdminShell>
   );
@@ -252,17 +248,20 @@ async function AdminProductsResults({
   query,
   page,
   filters,
+  categories,
 }: {
   query?: string;
   page: number;
   filters: AdminProductFilters;
+  categories: AdminCategory[];
 }) {
   const products = await listAdminProducts({ page, query, filters });
 
   return (
     <>
       <AdminPanel className="mt-6 overflow-hidden">
-        <div className="grid grid-cols-[1.45fr_0.72fr_0.65fr_0.62fr_0.56fr_0.82fr] gap-4 border-b border-gray-200 bg-gray-50 px-5 py-3 text-xs font-medium uppercase text-gray-500 max-lg:hidden">
+        <div className="grid grid-cols-[auto_1.45fr_0.72fr_0.65fr_0.62fr_0.56fr_0.82fr] gap-4 border-b border-gray-200 bg-gray-50 px-5 py-3 text-xs font-medium uppercase text-gray-500 max-lg:hidden">
+          <span>Select</span>
           <span>Product</span>
           <span>Category</span>
           <span>Stock</span>
@@ -271,9 +270,11 @@ async function AdminProductsResults({
           <span>Actions</span>
         </div>
         {products.items.length > 0 ? (
-          products.items.map((product) => (
-            <ProductRow key={product.id} product={product} />
-          ))
+          <ProductBulkActions
+            products={products.items}
+            categories={categories}
+            returnTo={buildPageHref(query, filters, products.page)}
+          />
         ) : (
           <div className="p-8 text-center">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -314,7 +315,8 @@ function AdminProductsResultsSkeleton() {
   return (
     <>
       <AdminPanel className="mt-6 overflow-hidden" aria-busy="true">
-        <div className="grid grid-cols-[1.45fr_0.72fr_0.65fr_0.62fr_0.56fr_0.82fr] gap-4 border-b border-gray-200 bg-gray-50 px-5 py-3 text-xs font-medium uppercase text-gray-500 max-lg:hidden">
+        <div className="grid grid-cols-[auto_1.45fr_0.72fr_0.65fr_0.62fr_0.56fr_0.82fr] gap-4 border-b border-gray-200 bg-gray-50 px-5 py-3 text-xs font-medium uppercase text-gray-500 max-lg:hidden">
+          <span>Select</span>
           <span>Product</span>
           <span>Category</span>
           <span>Stock</span>
@@ -326,8 +328,9 @@ function AdminProductsResultsSkeleton() {
           {Array.from({ length: 5 }, (_, index) => (
             <div
               key={index}
-              className="grid gap-4 px-5 py-4 lg:grid-cols-[1.45fr_0.72fr_0.65fr_0.62fr_0.56fr_0.82fr] lg:items-center"
+              className="grid gap-4 px-5 py-4 lg:grid-cols-[auto_1.45fr_0.72fr_0.65fr_0.62fr_0.56fr_0.82fr] lg:items-center"
             >
+              <div className="size-4 animate-pulse rounded bg-gray-100" />
               <div className="flex min-w-0 items-center gap-3">
                 <div className="size-14 shrink-0 animate-pulse rounded-lg bg-gray-100" />
                 <div className="min-w-0 flex-1">
@@ -356,89 +359,6 @@ function AdminProductsResultsSkeleton() {
   );
 }
 
-function ProductRow({ product }: { product: AdminProductSummary }) {
-  return (
-    <div className="grid gap-4 border-b border-gray-100 px-5 py-4 transition hover:bg-gray-50 lg:grid-cols-[1.45fr_0.72fr_0.65fr_0.62fr_0.56fr_0.82fr] lg:items-center">
-      <Link
-        href={`/admin/products/${product.id}`}
-        className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-brand-500/20"
-      >
-        <div className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-          {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt=""
-              fill
-              sizes="56px"
-              className="object-cover"
-            />
-          ) : null}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-gray-900">{product.title}</p>
-          <p className="mt-1 truncate text-sm text-gray-500">
-            {product.sku} - {product.slug}
-          </p>
-        </div>
-      </Link>
-      <p className="text-sm font-medium text-gray-700">
-        {product.categoryName ?? "Unassigned"}
-      </p>
-      <div className="text-sm font-medium text-gray-700">
-        <p>{product.stockOnHand} on hand</p>
-        <div className="mt-1 flex flex-wrap gap-2 text-xs">
-          <span className="text-gray-500">{product.reservedQuantity} reserved</span>
-          {product.isLowStock ? (
-            <span className="font-semibold text-warning-500">Low stock</span>
-          ) : null}
-        </div>
-      </div>
-      <p className="font-semibold text-gray-900">
-        {formatSar(product.priceHalalas)}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <ProductStatusToggle
-          action={`/api/admin/products/${product.id}`}
-          isActive={product.isActive}
-          productTitle={product.title}
-        />
-        {product.isFeatured ? <Flag isActive>Favorite</Flag> : null}
-      </div>
-      <div className="flex flex-wrap gap-2 lg:justify-end">
-        <Link
-          href={`/admin/products/${product.id}`}
-          className="inline-flex h-9 items-center rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          Edit
-        </Link>
-        <form action={`/api/admin/products/${product.id}`} method="post">
-          <input type="hidden" name="intent" value="archive" />
-          <ConfirmSubmitButton
-            message={`Archive ${product.title}? It will be hidden from the storefront.`}
-            className="h-9 rounded-lg border border-error-200 bg-white px-3 text-sm font-semibold text-error-700 hover:bg-error-50"
-          >
-            Delete
-          </ConfirmSubmitButton>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function Flag({
-  isActive,
-  children,
-}: {
-  isActive: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <AdminStatusBadge tone={isActive ? "success" : "neutral"}>
-      {children}
-    </AdminStatusBadge>
-  );
-}
-
 function getSavedMessage(saved: string) {
   switch (saved) {
     case "created":
@@ -451,9 +371,37 @@ function getSavedMessage(saved: string) {
       return "Product disabled successfully.";
     case "archived":
       return "Product deleted from storefront successfully.";
+    case "bulk":
+      return "Bulk action applied successfully.";
     default:
       return "Product saved successfully.";
   }
+}
+
+function StatusMessage({
+  saved,
+  error,
+}: {
+  saved?: string;
+  error?: string;
+}) {
+  if (error) {
+    return (
+      <p className="rounded-lg bg-error-50 px-3 py-2 text-sm font-medium text-error-700">
+        {error}
+      </p>
+    );
+  }
+
+  if (saved) {
+    return (
+      <p className="rounded-lg bg-success-50 px-3 py-2 text-sm font-medium text-success-700">
+        {getSavedMessage(saved)}
+      </p>
+    );
+  }
+
+  return null;
 }
 
 function getSingleParam(value: string | string[] | undefined) {
