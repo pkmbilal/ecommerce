@@ -7,6 +7,10 @@ import {
   getProductImageFileExtension,
   validateProductImageFile,
 } from "@/lib/media/product-image-files";
+import {
+  getProfileAvatarFileExtension,
+  validateProfileAvatarFile,
+} from "@/lib/media/profile-avatar-files";
 
 type R2UploadConfig = {
   accountId: string;
@@ -51,6 +55,39 @@ export async function uploadProductImageToR2({
   return `${config.publicBaseUrl}/${key}`;
 }
 
+export async function uploadProfileAvatarToR2({
+  file,
+  userId,
+}: {
+  file: File;
+  userId: string;
+}) {
+  validateProfileAvatarFile(file);
+
+  const config = requireR2UploadConfig();
+  const extension = getProfileAvatarFileExtension(file);
+
+  if (!extension) {
+    throw new Error("Profile images must be JPEG, PNG, WebP, or AVIF files.");
+  }
+
+  const key = [
+    "profiles",
+    sanitizePathSegment(userId),
+    `avatar-${Date.now()}.${extension}`,
+  ].join("/");
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  await putObjectToR2({
+    config,
+    key,
+    body: bytes,
+    contentType: file.type,
+  });
+
+  return `${config.publicBaseUrl}/${key}`;
+}
+
 function requireR2UploadConfig(): R2UploadConfig {
   const config = {
     accountId: process.env.R2_ACCOUNT_ID?.trim(),
@@ -67,7 +104,7 @@ function requireR2UploadConfig(): R2UploadConfig {
     !config.bucketName ||
     !config.publicBaseUrl
   ) {
-    throw new Error("R2 upload is not configured for product images.");
+    throw new Error("R2 upload is not configured.");
   }
 
   return config as R2UploadConfig;

@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 
 import { AccountShell } from "@/components/account/account-shell";
 import { AdminPanel } from "@/components/admin/tailadmin/primitives";
 import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import { getCustomerProfile } from "@/lib/customer/account";
+
+import { StatusMessage } from "./status-message";
 
 export const metadata: Metadata = {
   title: "Profile | SAHA Account",
@@ -29,10 +32,20 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       title="Profile"
       subtitle="Keep your contact details ready for Saudi cash on delivery orders."
     >
-      <div className="grid gap-6 lg:grid-cols-[1fr_0.72fr]">
+      <div className="grid gap-6">
         <AdminPanel title="Account details" description="Email is used for sign in.">
-          <form action="/api/account/profile" method="post" className="grid gap-5 p-5">
+          <form
+            action="/api/account/profile"
+            method="post"
+            encType="multipart/form-data"
+            className="grid gap-5 p-5"
+          >
             {status ? <StatusMessage status={status} /> : null}
+            <AvatarField
+              avatarUrl={profile.avatarUrl}
+              fullName={profile.fullName}
+              email={profile.email}
+            />
             <Field
               label="Full name"
               name="fullName"
@@ -57,19 +70,63 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             </button>
           </form>
         </AdminPanel>
-
-        <AdminPanel title="Account access" description="Your current role and permissions.">
-          <dl className="grid gap-4 p-5 text-sm">
-            <Detail label="Role" value={profile.role} />
-            <Detail
-              label="Dashboard access"
-              value="Profile, addresses, favorites, and linked COD orders"
-            />
-            <Detail label="Payments" value="Cash on delivery only" />
-          </dl>
-        </AdminPanel>
       </div>
     </AccountShell>
+  );
+}
+
+function AvatarField({
+  avatarUrl,
+  fullName,
+  email,
+}: {
+  avatarUrl?: string;
+  fullName?: string;
+  email: string;
+}) {
+  const displayName = fullName || email;
+  const initials = getInitials(displayName, email);
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-gray-200 bg-[#fbfaf7] p-4 sm:grid-cols-[auto_1fr] sm:items-center">
+      <div className="relative grid size-20 place-items-center overflow-hidden rounded-full border border-emerald-100 bg-emerald-900 text-xl font-bold text-white shadow-theme-sm">
+        {avatarUrl ? (
+          <Image
+            src={avatarUrl}
+            alt={`${displayName} profile image`}
+            fill
+            sizes="80px"
+            className="object-cover"
+          />
+        ) : (
+          <span aria-hidden="true">{initials}</span>
+        )}
+      </div>
+      <div className="grid min-w-0 gap-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Profile image</p>
+          <p className="mt-1 text-xs leading-5 text-gray-500">
+            Upload a JPEG, PNG, WebP, or AVIF image up to 2 MB.
+          </p>
+        </div>
+        <input
+          type="file"
+          name="avatar"
+          accept="image/jpeg,image/png,image/webp,image/avif"
+          className="block w-full text-sm font-medium text-gray-700 file:mr-4 file:h-10 file:rounded-lg file:border-0 file:bg-zinc-950 file:px-4 file:text-sm file:font-semibold file:text-white hover:file:bg-emerald-800"
+        />
+        {avatarUrl ? (
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+            <input
+              type="checkbox"
+              name="removeAvatar"
+              className="size-4 rounded border-gray-300 text-emerald-700 focus:ring-emerald-700/20"
+            />
+            Remove current profile image
+          </label>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -93,29 +150,21 @@ function Field({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="font-medium text-gray-500">{label}</dt>
-      <dd className="mt-1 font-semibold text-gray-900">{value}</dd>
-    </div>
-  );
-}
-
-function StatusMessage({ status }: { status: string }) {
-  const isError = status === "profile_error";
-
-  return (
-    <p
-      className={`rounded-lg p-3 text-sm font-semibold ${
-        isError ? "bg-error-50 text-error-700" : "bg-success-50 text-success-700"
-      }`}
-    >
-      {isError ? "Check your profile details and try again." : "Profile saved."}
-    </p>
-  );
-}
-
 function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function getInitials(name: string, email: string) {
+  const parts = name
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+
+  const source = parts[0] || email;
+
+  return source.slice(0, 2).toUpperCase();
 }

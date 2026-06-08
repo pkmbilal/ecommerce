@@ -14,6 +14,7 @@ type AccountLayoutProps = {
   profile: {
     email: string;
     fullName?: string;
+    avatarUrl?: string;
   };
   children: ReactNode;
 };
@@ -41,7 +42,11 @@ function AccountLayoutInner({ profile, children }: AccountLayoutProps) {
       <main
         className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
       >
-        <AccountHeader email={profile.email} fullName={profile.fullName} />
+        <AccountHeader
+          email={profile.email}
+          fullName={profile.fullName}
+          avatarUrl={profile.avatarUrl}
+        />
         <div className="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6">
           {children}
         </div>

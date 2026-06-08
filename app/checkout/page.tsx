@@ -21,7 +21,8 @@ export default async function CheckoutPage() {
       ])
     : null;
   const profile = accountData?.[0];
-  const defaultAddress = accountData?.[1].find((address) => address.isDefault);
+  const addresses = accountData?.[1] ?? [];
+  const defaultAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
 
   return (
     <>
@@ -39,6 +40,15 @@ export default async function CheckoutPage() {
             recalculated on the server before your COD order is created.
           </p>
           <CheckoutClient
+            savedAddresses={addresses.map((address) => ({
+              id: address.id,
+              label: address.label,
+              recipientName: address.recipientName,
+              phone: address.phone,
+              cityRegion: address.cityRegion,
+              deliveryAddress: address.deliveryAddress,
+              isDefault: address.isDefault,
+            }))}
             defaultValues={{
               customerName:
                 defaultAddress?.recipientName ?? profile?.fullName ?? "",

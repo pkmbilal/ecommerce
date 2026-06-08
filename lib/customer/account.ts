@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Enums } from "@/lib/supabase/database.types";
+import { isAllowedProfileAvatarUrl } from "@/lib/media/images";
 import { createSupabaseAuthServerClient } from "@/lib/supabase/server";
 
 import type { AddressFormInput, ProfileFormInput } from "./validation";
@@ -10,6 +11,7 @@ export type CustomerProfile = {
   email: string;
   fullName?: string;
   phone?: string;
+  avatarUrl?: string;
   role: Enums<"app_role">;
 };
 
@@ -57,28 +59,9 @@ export async function getCustomerProfile(userId: string): Promise<CustomerProfil
   const supabase = await createSupabaseAuthServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, phone, role")
+    .select("id, email, full_name, phone, avatar_url, role")
     .eq("id", userId)
     .maybeSingle();
-
-  if (error && isMissingProfilePhoneError(error.message)) {
-    const fallback = await supabase
-      .from("profiles")
-      .select("id, email, full_name, role")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (fallback.error) {
-      throw new Error(`Failed to load account profile: ${fallback.error.message}`);
-    }
-
-    return {
-      userId: fallback.data?.id ?? userId,
-      email: fallback.data?.email ?? "",
-      fullName: fallback.data?.full_name ?? undefined,
-      role: fallback.data?.role ?? "customer",
-    };
-  }
 
   if (error) {
     throw new Error(`Failed to load account profile: ${error.message}`);
@@ -89,6 +72,9 @@ export async function getCustomerProfile(userId: string): Promise<CustomerProfil
     email: data?.email ?? "",
     fullName: data?.full_name ?? undefined,
     phone: data?.phone ?? undefined,
+    avatarUrl: isAllowedProfileAvatarUrl(data?.avatar_url)
+      ? (data?.avatar_url ?? undefined)
+      : undefined,
     role: data?.role ?? "customer",
   };
 }
@@ -98,13 +84,20 @@ export async function updateCustomerProfile(
   input: ProfileFormInput,
 ) {
   const supabase = await createSupabaseAuthServerClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      full_name: input.fullName,
-      phone: input.phone ?? null,
-    })
-    .eq("id", userId);
+  const updates: {
+    full_name: string;
+    phone: string | null;
+    avatar_url?: string | null;
+  } = {
+    full_name: input.fullName,
+    phone: input.phone ?? null,
+  };
+
+  if ("avatarUrl" in input) {
+    updates.avatar_url = input.avatarUrl ?? null;
+  }
+
+  const { error } = await supabase.from("profiles").update(updates).eq("id", userId);
 
   if (error) {
     throw new Error(`Failed to update profile: ${error.message}`);
@@ -379,10 +372,6 @@ async function clearDefaultAddress(userId: string) {
   if (error) {
     throw new Error(`Failed to clear default address: ${error.message}`);
   }
-}
-
-function isMissingProfilePhoneError(message: string) {
-  return message.includes("profiles.phone") && message.includes("does not exist");
 }
 
 function isMissingCustomerDashboardSchemaError(message: string) {

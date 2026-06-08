@@ -4,17 +4,16 @@ import {
   Boxes,
   ChevronDown,
   Grid3X3,
-  Heart,
-  Home,
-  MapPin,
-  PackageCheck,
   ShoppingBag,
-  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
+import {
+  accountNavItems,
+  accountShoppingNavItems,
+} from "@/components/account/account-nav-items";
 import { useSidebar } from "@/components/admin/tailadmin/sidebar-context";
 
 type NavItem = {
@@ -24,41 +23,8 @@ type NavItem = {
   subItems?: { name: string; path: string }[];
 };
 
-const navItems: NavItem[] = [
-  {
-    icon: <Home className="size-5" />,
-    name: "Overview",
-    path: "/account",
-  },
-  {
-    icon: <UserRound className="size-5" />,
-    name: "Profile",
-    path: "/account/profile",
-  },
-  {
-    icon: <MapPin className="size-5" />,
-    name: "Addresses",
-    path: "/account/addresses",
-  },
-  {
-    icon: <Heart className="size-5" />,
-    name: "Favorites",
-    path: "/account/favorites",
-  },
-  {
-    icon: <PackageCheck className="size-5" />,
-    name: "Orders",
-    path: "/account/orders",
-  },
-];
-
-const supportItems: NavItem[] = [
-  {
-    icon: <ShoppingBag className="size-5" />,
-    name: "Storefront",
-    path: "/products",
-  },
-];
+const navItems: NavItem[] = accountNavItems;
+const supportItems: NavItem[] = accountShoppingNavItems;
 
 export function AccountSidebar() {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();

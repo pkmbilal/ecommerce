@@ -6,6 +6,7 @@ import {
   getRoleRedirectPath,
   type AppRole,
 } from "@/lib/auth/redirects";
+import { isAllowedProfileAvatarUrl } from "@/lib/media/images";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createSupabaseAuthServerClient } from "@/lib/supabase/server";
 
@@ -16,6 +17,7 @@ export type AuthenticatedProfile = {
   email: string;
   fullName?: string;
   phone?: string;
+  avatarUrl?: string;
   role: AppRole;
 };
 
@@ -81,30 +83,10 @@ export async function getProfileForAuthenticatedUser(
   const supabase = await createSupabaseAuthServerClient();
   const query = supabase
     .from("profiles")
-    .select("id, email, full_name, phone, role")
+    .select("id, email, full_name, phone, avatar_url, role")
     .eq("id", userId)
     .maybeSingle();
   const { data, error } = await query;
-
-  if (error && isMissingPhoneColumnError(error.message)) {
-    const fallbackQuery = supabase
-      .from("profiles")
-      .select("id, email, full_name, role")
-      .eq("id", userId)
-      .maybeSingle();
-    const fallback = await fallbackQuery;
-
-    if (fallback.error) {
-      throw new Error(`Failed to load user profile: ${fallback.error.message}`);
-    }
-
-    return {
-      userId: fallback.data?.id ?? userId,
-      email: fallback.data?.email || fallbackEmail,
-      fullName: fallback.data?.full_name ?? undefined,
-      role: fallback.data?.role ?? "customer",
-    };
-  }
 
   if (error) {
     throw new Error(`Failed to load user profile: ${error.message}`);
@@ -115,10 +97,9 @@ export async function getProfileForAuthenticatedUser(
     email: data?.email || fallbackEmail,
     fullName: data?.full_name ?? undefined,
     phone: data?.phone ?? undefined,
+    avatarUrl: isAllowedProfileAvatarUrl(data?.avatar_url)
+      ? (data?.avatar_url ?? undefined)
+      : undefined,
     role: data?.role ?? "customer",
   };
-}
-
-function isMissingPhoneColumnError(message: string) {
-  return message.includes("profiles.phone") && message.includes("does not exist");
 }

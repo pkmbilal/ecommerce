@@ -43,13 +43,12 @@ export async function POST(request: Request) {
     });
     return Response.json({ order });
   } catch (error) {
+    console.error("Failed to place COD order.", error);
+
     return Response.json(
       {
         errors: {
-          order:
-            error instanceof Error
-              ? error.message
-              : "Unable to place order right now.",
+          order: "Unable to place order right now.",
         },
       },
       { status: 500 },

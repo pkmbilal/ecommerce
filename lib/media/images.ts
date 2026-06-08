@@ -27,6 +27,15 @@ export function isAllowedProductImageUrl(
   return Boolean(r2Hostname && parsed.hostname === r2Hostname);
 }
 
+export function isAllowedProfileAvatarUrl(
+  value: string | null | undefined,
+): value is string {
+  const parsed = parseHttpsUrl(value);
+  const r2Hostname = getR2PublicMediaHostname();
+
+  return Boolean(parsed && r2Hostname && parsed.hostname === r2Hostname);
+}
+
 function parseHttpsUrl(value: string | null | undefined): URL | null {
   const trimmed = value?.trim();
 
