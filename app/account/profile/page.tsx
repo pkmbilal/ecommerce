@@ -32,7 +32,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       title="Profile"
       subtitle="Keep your contact details ready for Saudi cash on delivery orders."
     >
-      <div className="grid gap-6 lg:grid-cols-[1fr_0.72fr]">
+      <div className="grid gap-6">
         <AdminPanel title="Account details" description="Email is used for sign in.">
           <form
             action="/api/account/profile"
@@ -69,17 +69,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               Save profile
             </button>
           </form>
-        </AdminPanel>
-
-        <AdminPanel title="Account access" description="Your current role and permissions.">
-          <dl className="grid gap-4 p-5 text-sm">
-            <Detail label="Role" value={profile.role} />
-            <Detail
-              label="Dashboard access"
-              value="Profile, addresses, favorites, and linked COD orders"
-            />
-            <Detail label="Payments" value="Cash on delivery only" />
-          </dl>
         </AdminPanel>
       </div>
     </AccountShell>
@@ -158,15 +147,6 @@ function Field({
         {...props}
       />
     </label>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="font-medium text-gray-500">{label}</dt>
-      <dd className="mt-1 font-semibold text-gray-900">{value}</dd>
-    </div>
   );
 }
 

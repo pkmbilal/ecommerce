@@ -24,6 +24,7 @@ type CheckoutResponse = {
 };
 
 type CheckoutClientProps = {
+  savedAddresses?: SavedCheckoutAddress[];
   defaultValues?: {
     customerName?: string;
     customerPhone?: string;
@@ -32,13 +33,46 @@ type CheckoutClientProps = {
   };
 };
 
-export function CheckoutClient({ defaultValues }: CheckoutClientProps) {
+type SavedCheckoutAddress = {
+  id: string;
+  label: string;
+  recipientName: string;
+  phone: string;
+  cityRegion: string;
+  deliveryAddress: string;
+  isDefault: boolean;
+};
+
+type CheckoutFormValues = {
+  customerName: string;
+  customerPhone: string;
+  cityRegion: string;
+  deliveryAddress: string;
+};
+
+export function CheckoutClient({
+  defaultValues,
+  savedAddresses = [],
+}: CheckoutClientProps) {
   const { items, clearCart } = useCart();
+  const initialAddress =
+    savedAddresses.find((address) => address.isDefault) ?? savedAddresses[0];
   const cartKey = JSON.stringify(items);
   const [summaryState, setSummaryState] = useState<{
     key: string;
     summary: CartSummary | null;
   }>({ key: "", summary: null });
+  const [selectedAddressId, setSelectedAddressId] = useState(
+    initialAddress?.id ?? "",
+  );
+  const [formValues, setFormValues] = useState<CheckoutFormValues>(() => ({
+    customerName:
+      initialAddress?.recipientName ?? defaultValues?.customerName ?? "",
+    customerPhone: initialAddress?.phone ?? defaultValues?.customerPhone ?? "",
+    cityRegion: initialAddress?.cityRegion ?? defaultValues?.cityRegion ?? "",
+    deliveryAddress:
+      initialAddress?.deliveryAddress ?? defaultValues?.deliveryAddress ?? "",
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [idempotencyKey] = useState(createIdempotencyKey);
@@ -167,10 +201,52 @@ export function CheckoutClient({ defaultValues }: CheckoutClientProps) {
       >
         <h2 className="text-2xl font-black text-zinc-950">Delivery details</h2>
         <div className="mt-6 grid gap-5">
+          {savedAddresses.length > 1 ? (
+            <label className="grid gap-2">
+              <span className="text-sm font-bold text-zinc-950">
+                Saved address
+              </span>
+              <select
+                value={selectedAddressId}
+                onChange={(event) => {
+                  const nextAddress = savedAddresses.find(
+                    (address) => address.id === event.target.value,
+                  );
+
+                  setSelectedAddressId(event.target.value);
+
+                  if (nextAddress) {
+                    setFormValues({
+                      customerName: nextAddress.recipientName,
+                      customerPhone: nextAddress.phone,
+                      cityRegion: nextAddress.cityRegion,
+                      deliveryAddress: nextAddress.deliveryAddress,
+                    });
+                  }
+                }}
+                className="h-12 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
+              >
+                <option value="">Custom delivery details</option>
+                {savedAddresses.map((address) => (
+                  <option key={address.id} value={address.id}>
+                    {address.label}
+                    {address.isDefault ? " (Default)" : ""} - {address.cityRegion}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <Field
             label="Customer name"
             name="customerName"
-            defaultValue={defaultValues?.customerName}
+            value={formValues.customerName}
+            onChange={(event) => {
+              setSelectedAddressId("");
+              setFormValues((current) => ({
+                ...current,
+                customerName: event.target.value,
+              }));
+            }}
             error={errors.customerName}
             autoComplete="name"
             required
@@ -178,7 +254,14 @@ export function CheckoutClient({ defaultValues }: CheckoutClientProps) {
           <Field
             label="Saudi phone number"
             name="customerPhone"
-            defaultValue={defaultValues?.customerPhone}
+            value={formValues.customerPhone}
+            onChange={(event) => {
+              setSelectedAddressId("");
+              setFormValues((current) => ({
+                ...current,
+                customerPhone: event.target.value,
+              }));
+            }}
             error={errors.customerPhone}
             autoComplete="tel"
             inputMode="tel"
@@ -188,7 +271,14 @@ export function CheckoutClient({ defaultValues }: CheckoutClientProps) {
           <Field
             label="City or region"
             name="cityRegion"
-            defaultValue={defaultValues?.cityRegion}
+            value={formValues.cityRegion}
+            onChange={(event) => {
+              setSelectedAddressId("");
+              setFormValues((current) => ({
+                ...current,
+                cityRegion: event.target.value,
+              }));
+            }}
             error={errors.cityRegion}
             autoComplete="address-level2"
             required
@@ -199,7 +289,14 @@ export function CheckoutClient({ defaultValues }: CheckoutClientProps) {
             </span>
             <textarea
               name="deliveryAddress"
-              defaultValue={defaultValues?.deliveryAddress}
+              value={formValues.deliveryAddress}
+              onChange={(event) => {
+                setSelectedAddressId("");
+                setFormValues((current) => ({
+                  ...current,
+                  deliveryAddress: event.target.value,
+                }));
+              }}
               required
               rows={4}
               autoComplete="street-address"

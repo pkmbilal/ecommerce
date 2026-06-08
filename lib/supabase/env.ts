@@ -24,8 +24,7 @@ export function requireSupabasePublicEnv() {
 }
 
 export function requireSupabaseServerKey() {
-  const serverKey =
-    process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serverKey = getSupabaseServerKey();
 
   if (!serverKey) {
     throw new Error(
@@ -37,5 +36,8 @@ export function requireSupabaseServerKey() {
 }
 
 export function getSupabaseServerKey() {
-  return process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return (
+    process.env.SUPABASE_SECRET_KEY?.trim() ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  );
 }
