@@ -2,6 +2,7 @@ import type {
   AdminCategory,
   AdminProductDetail,
 } from "@/lib/admin/catalog";
+import { ConfirmSubmitButton } from "@/app/admin/products/confirm-submit-button";
 import { AdminPanel } from "@/components/admin/tailadmin/primitives";
 import { ProductFormDraft } from "@/app/admin/products/product-form-draft";
 
@@ -22,8 +23,15 @@ export function ProductForm({
   saved,
   mode,
 }: ProductFormProps) {
+  const archiveFormId = product ? `archive-product-${product.id}` : undefined;
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_0.58fr]">
+      {product ? (
+        <form id={archiveFormId} action={action} method="post" className="hidden">
+          <input type="hidden" name="intent" value="archive" />
+        </form>
+      ) : null}
       <form
         action={action}
         method="post"
@@ -36,7 +44,18 @@ export function ProductForm({
           <h2 className="text-xl font-semibold text-gray-900">
             {mode === "create" ? "Product details" : "Edit product"}
           </h2>
-          <StatusMessages error={error} saved={saved} />
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusMessages error={error} saved={saved} />
+            {archiveFormId ? (
+              <ConfirmSubmitButton
+                form={archiveFormId}
+                message={`Archive ${product?.title ?? "this product"}? It will be hidden from the storefront.`}
+                className="h-10 rounded-lg border border-error-200 bg-white px-4 text-sm font-semibold text-error-700 transition hover:bg-error-50"
+              >
+                Delete
+              </ConfirmSubmitButton>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2">

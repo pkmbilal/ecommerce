@@ -23,6 +23,7 @@ export type AdminProductSummary = {
   compareAtPriceHalalas?: number;
   stockOnHand: number;
   reservedQuantity: number;
+  isLowStock: boolean;
   isActive: boolean;
   isFeatured: boolean;
   imageUrl?: string;
@@ -51,6 +52,33 @@ export type AdminProductList = {
   page: number;
   limit: number;
   hasNextPage: boolean;
+};
+
+export type AdminProductStatusFilter = "active" | "inactive";
+export type AdminProductFeaturedFilter = "featured" | "standard";
+export type AdminProductStockFilter =
+  | "in_stock"
+  | "out_of_stock"
+  | "reserved"
+  | "low_stock";
+export type AdminProductMediaFilter = "with_image" | "missing_image";
+export type AdminProductSort = "newest" | "title_asc" | "price_asc" | "price_desc" | "stock_asc";
+export type AdminProductBulkAction =
+  | "activate"
+  | "deactivate"
+  | "archive"
+  | "feature"
+  | "unfeature"
+  | "assign_category"
+  | "set_stock";
+
+export type AdminProductFilters = {
+  status?: AdminProductStatusFilter;
+  featured?: AdminProductFeaturedFilter;
+  categoryId?: string;
+  stock?: AdminProductStockFilter;
+  media?: AdminProductMediaFilter;
+  sort?: AdminProductSort;
 };
 
 export type CategoryFormInput = {
@@ -85,6 +113,14 @@ export type ProductImageInput = {
   isPrimary: boolean;
 };
 
+export type AdminProductBulkInput = {
+  action: AdminProductBulkAction;
+  productIds: string[];
+  categoryId?: string;
+  targetStockOnHand?: number;
+  reason?: string;
+};
+
 const DEFAULT_LIMIT = 20;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SKU_PATTERN = /^[A-Z0-9][A-Z0-9-]{2,39}$/;
@@ -109,6 +145,7 @@ type ProductRow = {
     stock_on_hand: number;
     reserved_quantity: number;
     low_stock_threshold: number;
+    is_low_stock: boolean;
   } | null;
   product_images: {
     id: string;
@@ -180,18 +217,23 @@ export async function updateAdminCategory(
 export async function listAdminProducts({
   page = 1,
   query,
+  filters = {},
 }: {
   page?: number;
   query?: string;
+  filters?: AdminProductFilters;
 } = {}): Promise<AdminProductList> {
   const limit = DEFAULT_LIMIT;
   const safePage = Math.max(page, 1);
   const offset = (safePage - 1) * limit;
   const supabase = await createSupabaseAuthServerClient();
+  const productSelect = getProductSelect({
+    requireInventory: Boolean(filters.stock) || filters.sort === "stock_asc",
+    requireImage: filters.media === "with_image",
+  });
   let request = supabase
     .from("products")
-    .select(getProductSelect(), { count: "exact" })
-    .order("created_at", { ascending: false })
+    .select(productSelect, { count: "exact" })
     .order("position", {
       referencedTable: "product_images",
       ascending: true,
@@ -203,6 +245,59 @@ export async function listAdminProducts({
     request = request.or(
       `title_en.ilike.%${term}%,sku.ilike.%${term}%,slug.ilike.%${term}%`,
     );
+  }
+
+  if (filters.status === "active") {
+    request = request.eq("is_active", true);
+  } else if (filters.status === "inactive") {
+    request = request.eq("is_active", false);
+  }
+
+  if (filters.featured === "featured") {
+    request = request.eq("is_featured", true);
+  } else if (filters.featured === "standard") {
+    request = request.eq("is_featured", false);
+  }
+
+  if (filters.categoryId === "unassigned") {
+    request = request.is("category_id", null);
+  } else if (filters.categoryId) {
+    request = request.eq("category_id", filters.categoryId);
+  }
+
+  if (filters.stock === "in_stock") {
+    request = request.gt("inventory_items.stock_on_hand", 0);
+  } else if (filters.stock === "out_of_stock") {
+    request = request.eq("inventory_items.stock_on_hand", 0);
+  } else if (filters.stock === "reserved") {
+    request = request.gt("inventory_items.reserved_quantity", 0);
+  } else if (filters.stock === "low_stock") {
+    request = request.eq("inventory_items.is_low_stock", true);
+  }
+
+  if (filters.media === "missing_image") {
+    request = request.is("product_images", null);
+  }
+
+  switch (filters.sort) {
+    case "title_asc":
+      request = request.order("title_en", { ascending: true });
+      break;
+    case "price_asc":
+      request = request.order("price_halalas", { ascending: true });
+      break;
+    case "price_desc":
+      request = request.order("price_halalas", { ascending: false });
+      break;
+    case "stock_asc":
+      request = request.order("inventory_items(stock_on_hand)", {
+        ascending: true,
+      });
+      break;
+    case "newest":
+    default:
+      request = request.order("created_at", { ascending: false });
+      break;
   }
 
   const { data, error, count } = await request;
@@ -326,6 +421,29 @@ export async function updateAdminProduct(
   await replaceProductImages(productId, input.images);
 }
 
+export async function setAdminProductActive(
+  productId: string,
+  isActive: boolean,
+) {
+  const supabase = await createSupabaseAuthServerClient();
+  const { data, error } = await supabase
+    .from("products")
+    .update({ is_active: isActive })
+    .eq("id", productId)
+    .select("slug")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update product status: ${error.message}`);
+  }
+
+  return { slug: data.slug };
+}
+
+export async function archiveAdminProduct(productId: string) {
+  return setAdminProductActive(productId, false);
+}
+
 export async function adjustAdminProductInventory({
   productId,
   targetStockOnHand,
@@ -344,6 +462,40 @@ export async function adjustAdminProductInventory({
 
   if (error) {
     throw new Error(error.message);
+  }
+}
+
+export async function applyAdminProductBulkAction(input: AdminProductBulkInput) {
+  const productIds = Array.from(new Set(input.productIds));
+
+  if (productIds.length === 0) {
+    throw new Error("Select at least one product.");
+  }
+
+  if (input.action === "set_stock") {
+    if (input.targetStockOnHand === undefined || !input.reason) {
+      throw new Error("Target stock and reason are required.");
+    }
+
+    for (const productId of productIds) {
+      await adjustAdminProductInventory({
+        productId,
+        targetStockOnHand: input.targetStockOnHand,
+        reason: input.reason,
+      });
+    }
+
+    return;
+  }
+
+  const supabase = await createSupabaseAuthServerClient();
+  const { error } = await supabase
+    .from("products")
+    .update(getBulkProductUpdate(input))
+    .in("id", productIds);
+
+  if (error) {
+    throw new Error(`Failed to update selected products: ${error.message}`);
   }
 }
 
@@ -441,6 +593,50 @@ export function parseInventoryAdjustmentFormData(formData: FormData) {
   return { targetStockOnHand, reason };
 }
 
+export function parseProductBulkActionFormData(
+  formData: FormData,
+): AdminProductBulkInput {
+  const action = parseBulkAction(formData.get("bulkAction"));
+  const productIds = formData
+    .getAll("productId")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (productIds.length === 0) {
+    throw new Error("Select at least one product.");
+  }
+
+  if (productIds.length > 100) {
+    throw new Error("Bulk actions are limited to 100 products at a time.");
+  }
+
+  if (action === "assign_category") {
+    const categoryId = optionalText(formData, "categoryId");
+
+    if (!categoryId) {
+      throw new Error("Choose a category for the selected products.");
+    }
+
+    return { action, productIds, categoryId };
+  }
+
+  if (action === "set_stock") {
+    const targetStockOnHand = parseIntegerField(formData, "targetStockOnHand", {
+      min: 0,
+    });
+    const reason = requireText(formData, "reason");
+
+    if (reason.length < 3) {
+      throw new Error("Inventory adjustment reason is required.");
+    }
+
+    return { action, productIds, targetStockOnHand, reason };
+  }
+
+  return { action, productIds };
+}
+
 async function replaceProductImages(
   productId: string,
   images: ProductImageInput[],
@@ -477,7 +673,58 @@ async function replaceProductImages(
   }
 }
 
-function getProductSelect() {
+function getBulkProductUpdate(input: AdminProductBulkInput) {
+  switch (input.action) {
+    case "activate":
+      return { is_active: true };
+    case "deactivate":
+    case "archive":
+      return { is_active: false };
+    case "feature":
+      return { is_featured: true };
+    case "unfeature":
+      return { is_featured: false };
+    case "assign_category":
+      return { category_id: input.categoryId };
+    case "set_stock":
+      throw new Error("Stock updates must use inventory adjustment.");
+    default:
+      return assertNever(input.action);
+  }
+}
+
+function parseBulkAction(value: FormDataEntryValue | null): AdminProductBulkAction {
+  if (
+    value === "activate" ||
+    value === "deactivate" ||
+    value === "archive" ||
+    value === "feature" ||
+    value === "unfeature" ||
+    value === "assign_category" ||
+    value === "set_stock"
+  ) {
+    return value;
+  }
+
+  throw new Error("Choose a valid bulk action.");
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unsupported bulk action: ${value}`);
+}
+
+function getProductSelect({
+  requireInventory = false,
+  requireImage = false,
+}: {
+  requireInventory?: boolean;
+  requireImage?: boolean;
+} = {}) {
+  const inventoryRelation = requireInventory
+    ? "inventory_items!inner"
+    : "inventory_items";
+  const imageRelation = requireImage ? "product_images!inner" : "product_images";
+
   return `
     id,
     slug,
@@ -492,8 +739,8 @@ function getProductSelect() {
     is_active,
     is_featured,
     categories(name_en),
-    inventory_items(stock_on_hand, reserved_quantity, low_stock_threshold),
-    product_images(id, url, alt_en, position, is_primary)
+    ${inventoryRelation}(stock_on_hand, reserved_quantity, low_stock_threshold, is_low_stock),
+    ${imageRelation}(id, url, alt_en, position, is_primary)
   `;
 }
 
@@ -512,6 +759,7 @@ function mapProductSummary(row: ProductRow): AdminProductSummary {
     compareAtPriceHalalas: row.compare_at_price_halalas ?? undefined,
     stockOnHand: inventory?.stock_on_hand ?? 0,
     reservedQuantity: inventory?.reserved_quantity ?? 0,
+    isLowStock: inventory?.is_low_stock ?? false,
     isActive: row.is_active,
     isFeatured: row.is_featured,
     imageUrl: isAllowedProductImageUrl(primaryImage?.url)

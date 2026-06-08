@@ -214,6 +214,25 @@ test("admin role RPCs run as invoker so RLS enforces admin access", () => {
   assert.match(migration, /grant execute on function public\.adjust_product_inventory/);
 });
 
+test("catalog RLS migration consolidates overlapping advisor policies", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260608110000_consolidate_rls_policies.sql",
+  );
+
+  assert.match(
+    migration,
+    /drop policy if exists "No public access to orders" on public\.orders;/,
+  );
+  assert.match(migration, /to anon\s+using \(is_active = true\);/);
+  assert.match(
+    migration,
+    /to authenticated\s+using \(is_active = true or public\.current_user_is_admin\(\)\);/,
+  );
+  assert.match(migration, /"Admins can insert products"/);
+  assert.match(migration, /"Admins can update product images"/);
+  assert.doesNotMatch(migration, /for all/);
+});
+
 test("role based login redirects to safe dashboards", () => {
   assert.equal(getSafeRoleRedirectPath("admin"), "/admin");
   assert.equal(getSafeRoleRedirectPath("customer"), "/account");
