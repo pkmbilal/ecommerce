@@ -6,6 +6,7 @@ type AccountShellProps = {
   profile: {
     email: string;
     fullName?: string;
+    avatarUrl?: string;
   };
   title: string;
   subtitle?: string;

@@ -3,6 +3,7 @@ const SAUDI_PHONE_PATTERN = /^(\+966|966|0)?5[0-9]{8}$/;
 export type ProfileFormInput = {
   fullName: string;
   phone?: string;
+  avatarUrl?: string | null;
 };
 
 export type AddressFormInput = {
