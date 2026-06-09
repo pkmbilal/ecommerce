@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { SiteHeader } from "@/components/storefront/site-header";
 import { getCurrentProfile } from "@/lib/admin/auth";
@@ -14,14 +15,19 @@ export const metadata: Metadata = {
 
 export default async function CheckoutPage() {
   const session = await getCurrentProfile();
-  const accountData = session
-    ? await Promise.all([
-        getCustomerProfile(session.userId),
-        listCustomerAddresses(session.userId),
-      ])
-    : null;
-  const profile = accountData?.[0];
-  const addresses = accountData?.[1] ?? [];
+
+  if (!session) {
+    redirect("/login?next=/checkout");
+  }
+
+  if (session.role === "admin") {
+    redirect("/admin");
+  }
+
+  const [profile, addresses] = await Promise.all([
+    getCustomerProfile(session.userId),
+    listCustomerAddresses(session.userId),
+  ]);
   const defaultAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
 
   return (

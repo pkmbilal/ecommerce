@@ -96,6 +96,63 @@ export type Database = {
           },
         ];
       };
+      customer_cart_items: {
+        Row: {
+          cart_id: string;
+          created_at: string;
+          product_id: string;
+          quantity: number;
+          updated_at: string;
+        };
+        Insert: {
+          cart_id: string;
+          created_at?: string;
+          product_id: string;
+          quantity: number;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["customer_cart_items"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "customer_cart_items_cart_id_fkey";
+            columns: ["cart_id"];
+            isOneToOne: false;
+            referencedRelation: "customer_carts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_cart_items_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      customer_carts: {
+        Row: {
+          created_at: string;
+          id: string;
+          profile_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          profile_id: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["customer_carts"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "customer_carts_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       idempotency_keys: {
         Row: {
           created_at: string;

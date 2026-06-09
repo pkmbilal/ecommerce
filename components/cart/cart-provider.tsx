@@ -9,7 +9,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
@@ -20,6 +19,9 @@ import { formatSar } from "@/lib/money";
 type CartContextValue = {
   items: CartItemInput[];
   itemCount: number;
+  summary: CartSummary | null;
+  isServerCart: boolean;
+  isLoaded: boolean;
   isOpen: boolean;
   addItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -29,63 +31,163 @@ type CartContextValue = {
   closeCart: () => void;
 };
 
+type CartApiResponse = {
+  items: CartItemInput[];
+  summary: CartSummary;
+};
+
 const CartContext = createContext<CartContextValue | null>(null);
 const CART_STORAGE_KEY = "saha-cart-v1";
 const EMPTY_CART_ITEMS: CartItemInput[] = [];
-const cartListeners = new Set<() => void>();
-
-let cartSnapshot: CartItemInput[] = EMPTY_CART_ITEMS;
-let hasReadStoredCart = false;
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const items = useSyncExternalStore(
-    subscribeToCart,
-    getCartSnapshot,
-    getServerCartSnapshot,
-  );
+  const [items, setItems] = useState<CartItemInput[]>(EMPTY_CART_ITEMS);
+  const [serverSummary, setServerSummary] = useState<CartSummary | null>(null);
+  const [isServerCart, setIsServerCart] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  const addItem = useCallback((productId: string) => {
-    writeCartItems((currentItems) => {
-      const existingItem = currentItems.find((item) => item.productId === productId);
+  useEffect(() => {
+    const storedItems = readStoredCart();
 
-      if (existingItem) {
-        return currentItems.map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: Math.min(item.quantity + 1, 99) }
-            : item,
-        );
+    const controller = new AbortController();
+
+    fetch("/api/cart", { signal: controller.signal })
+      .then(async (response) => {
+        if (response.status === 401) {
+          setItems(storedItems);
+          setIsLoaded(true);
+          return null;
+        }
+
+        if (!response.ok) {
+          throw new Error("Unable to load cart.");
+        }
+
+        return (await response.json()) as CartApiResponse;
+      })
+      .then(async (payload) => {
+        if (!payload || controller.signal.aborted) {
+          return;
+        }
+
+        setIsServerCart(true);
+
+        if (storedItems.length > 0) {
+          const mergedPayload = await mutateServerCart("/api/cart/items", {
+            method: "POST",
+            body: JSON.stringify({ items: storedItems }),
+            signal: controller.signal,
+          });
+
+          if (!controller.signal.aborted) {
+            window.localStorage.removeItem(CART_STORAGE_KEY);
+            applyServerCart(mergedPayload, setItems, setServerSummary);
+            setIsLoaded(true);
+          }
+
+          return;
+        }
+
+        applyServerCart(payload, setItems, setServerSummary);
+        setIsLoaded(true);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setIsServerCart(false);
+          setServerSummary(null);
+          setItems(storedItems);
+          setIsLoaded(true);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const addItem = useCallback(
+    (productId: string) => {
+      setIsOpen(true);
+
+      if (isServerCart) {
+        void mutateServerCart("/api/cart/items", {
+          method: "POST",
+          body: JSON.stringify({ productId, quantity: 1 }),
+        }).then((payload) => applyServerCart(payload, setItems, setServerSummary));
+        return;
       }
 
-      return [...currentItems, { productId, quantity: 1 }];
-    });
-    setIsOpen(true);
-  }, []);
+      setItems((currentItems) => {
+        const nextItems = resolveAddedItem(currentItems, productId);
+        writeStoredCart(nextItems);
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    writeCartItems((currentItems) =>
-      normalizeItems(
-        currentItems.map((item) =>
-          item.productId === productId ? { ...item, quantity } : item,
-        ),
-      ),
-    );
-  }, []);
+        return nextItems;
+      });
+    },
+    [isServerCart],
+  );
 
-  const removeItem = useCallback((productId: string) => {
-    writeCartItems((currentItems) =>
-      currentItems.filter((item) => item.productId !== productId),
-    );
-  }, []);
+  const updateQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      if (isServerCart) {
+        void mutateServerCart(`/api/cart/items/${encodeURIComponent(productId)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ quantity }),
+        }).then((payload) => applyServerCart(payload, setItems, setServerSummary));
+        return;
+      }
+
+      setItems((currentItems) => {
+        const nextItems = normalizeItems(
+          currentItems.map((item) =>
+            item.productId === productId ? { ...item, quantity } : item,
+          ),
+        );
+        writeStoredCart(nextItems);
+
+        return nextItems;
+      });
+    },
+    [isServerCart],
+  );
+
+  const removeItem = useCallback(
+    (productId: string) => {
+      if (isServerCart) {
+        void mutateServerCart(`/api/cart/items/${encodeURIComponent(productId)}`, {
+          method: "DELETE",
+        }).then((payload) => applyServerCart(payload, setItems, setServerSummary));
+        return;
+      }
+
+      setItems((currentItems) => {
+        const nextItems = currentItems.filter((item) => item.productId !== productId);
+        writeStoredCart(nextItems);
+
+        return nextItems;
+      });
+    },
+    [isServerCart],
+  );
 
   const clearCart = useCallback(() => {
-    writeCartItems([]);
-  }, []);
+    if (isServerCart) {
+      void mutateServerCart("/api/cart", {
+        method: "DELETE",
+      }).then((payload) => applyServerCart(payload, setItems, setServerSummary));
+      return;
+    }
+
+    writeStoredCart([]);
+    setItems([]);
+  }, [isServerCart]);
 
   const value = useMemo<CartContextValue>(
     () => ({
       items,
       itemCount: items.reduce((total, item) => total + item.quantity, 0),
+      summary: serverSummary,
+      isServerCart,
+      isLoaded,
       isOpen,
       addItem,
       updateQuantity,
@@ -94,7 +196,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       openCart: () => setIsOpen(true),
       closeCart: () => setIsOpen(false),
     }),
-    [addItem, clearCart, isOpen, items, removeItem, updateQuantity],
+    [
+      addItem,
+      clearCart,
+      isOpen,
+      isLoaded,
+      isServerCart,
+      items,
+      removeItem,
+      serverSummary,
+      updateQuantity,
+    ],
   );
 
   return (
@@ -116,17 +228,32 @@ export function useCart() {
 }
 
 function CartDrawer() {
-  const { isOpen, closeCart, items, updateQuantity, removeItem } = useCart();
+  const {
+    isOpen,
+    closeCart,
+    items,
+    summary: serverSummary,
+    isServerCart,
+    updateQuantity,
+    removeItem,
+  } = useCart();
   const cartKey = JSON.stringify(items);
   const [summaryState, setSummaryState] = useState<{
     key: string;
     summary: CartSummary | null;
   }>({ key: "", summary: null });
-  const summary = summaryState.key === cartKey ? summaryState.summary : null;
-  const isLoading = isOpen && items.length > 0 && summaryState.key !== cartKey;
+  const summary = isServerCart
+    ? serverSummary
+    : summaryState.key === cartKey
+      ? summaryState.summary
+      : null;
+  const isLoading =
+    isOpen &&
+    items.length > 0 &&
+    (isServerCart ? !serverSummary : summaryState.key !== cartKey);
 
   useEffect(() => {
-    if (!isOpen || items.length === 0) {
+    if (isServerCart || !isOpen || items.length === 0) {
       return;
     }
 
@@ -157,7 +284,7 @@ function CartDrawer() {
       });
 
     return () => controller.abort();
-  }, [cartKey, isOpen, items]);
+  }, [cartKey, isOpen, isServerCart, items]);
 
   if (!isOpen) {
     return null;
@@ -298,12 +425,20 @@ function CartDrawer() {
           </div>
           <p className="mt-2 text-xs leading-5 text-zinc-500">
             Estimate only. Final SAR totals, VAT, delivery fees, and stock are
-            recalculated server-side at checkout.
+            recalculated server-side at checkout. Sign in is required to place
+            a COD order.
           </p>
+          <Link
+            href="/cart"
+            onClick={closeCart}
+            className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-bold text-white transition hover:bg-emerald-800"
+          >
+            View cart
+          </Link>
           <Link
             href="/checkout"
             onClick={closeCart}
-            className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-bold text-white transition hover:bg-emerald-800"
+            className="mt-3 inline-flex h-12 w-full items-center justify-center rounded-full border border-zinc-950 px-5 text-sm font-bold text-zinc-950 transition hover:border-emerald-800 hover:text-emerald-800"
           >
             Continue to checkout
           </Link>
@@ -334,6 +469,45 @@ function QuantityButton({
   );
 }
 
+function resolveAddedItem(currentItems: CartItemInput[], productId: string) {
+  const existingItem = currentItems.find((item) => item.productId === productId);
+
+  if (existingItem) {
+    return currentItems.map((item) =>
+      item.productId === productId
+        ? { ...item, quantity: Math.min(item.quantity + 1, 99) }
+        : item,
+    );
+  }
+
+  return normalizeItems([...currentItems, { productId, quantity: 1 }]);
+}
+
+async function mutateServerCart(url: string, init: RequestInit) {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init.headers,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to update cart.");
+  }
+
+  return (await response.json()) as CartApiResponse;
+}
+
+function applyServerCart(
+  payload: CartApiResponse,
+  setItems: (items: CartItemInput[]) => void,
+  setServerSummary: (summary: CartSummary) => void,
+) {
+  setItems(normalizeItems(payload.items));
+  setServerSummary(payload.summary);
+}
+
 function normalizeItems(items: CartItemInput[]) {
   return items
     .filter(
@@ -350,48 +524,10 @@ function normalizeItems(items: CartItemInput[]) {
     }));
 }
 
-function subscribeToCart(listener: () => void) {
-  cartListeners.add(listener);
-
-  return () => {
-    cartListeners.delete(listener);
-  };
-}
-
-function getCartSnapshot() {
-  if (typeof window === "undefined") {
-    return EMPTY_CART_ITEMS;
-  }
-
-  if (!hasReadStoredCart) {
-    cartSnapshot = readStoredCart();
-    hasReadStoredCart = true;
-  }
-
-  return cartSnapshot;
-}
-
-function getServerCartSnapshot() {
-  return EMPTY_CART_ITEMS;
-}
-
-function writeCartItems(
-  nextItems:
-    | CartItemInput[]
-    | ((currentItems: CartItemInput[]) => CartItemInput[]),
-) {
-  const currentItems = getCartSnapshot();
-  const resolvedItems =
-    typeof nextItems === "function" ? nextItems(currentItems) : nextItems;
-
-  cartSnapshot = normalizeItems(resolvedItems);
-  hasReadStoredCart = true;
-
+function writeStoredCart(items: CartItemInput[]) {
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartSnapshot));
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   }
-
-  cartListeners.forEach((listener) => listener());
 }
 
 function readStoredCart() {
