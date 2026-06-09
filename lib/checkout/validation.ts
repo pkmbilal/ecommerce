@@ -16,6 +16,7 @@ type RawCheckoutInput = {
 
 export function validateCheckoutInput(
   rawInput: RawCheckoutInput,
+  options: { requireItems?: boolean } = {},
 ): CheckoutValidationResult {
   const errors: Record<string, string> = {};
   const idempotencyKey = asTrimmedString(rawInput.idempotencyKey);
@@ -46,7 +47,7 @@ export function validateCheckoutInput(
     errors.cityRegion = "Enter the delivery city or region.";
   }
 
-  if (items.length === 0) {
+  if ((options.requireItems ?? true) && items.length === 0) {
     errors.items = "Your cart is empty.";
   }
 

@@ -54,7 +54,13 @@ export function CheckoutClient({
   defaultValues,
   savedAddresses = [],
 }: CheckoutClientProps) {
-  const { items, clearCart } = useCart();
+  const {
+    items,
+    clearCart,
+    isServerCart,
+    isLoaded: isCartLoaded,
+    summary: serverSummary,
+  } = useCart();
   const initialAddress =
     savedAddresses.find((address) => address.isDefault) ?? savedAddresses[0];
   const cartKey = JSON.stringify(items);
@@ -75,17 +81,23 @@ export function CheckoutClient({
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const [idempotencyKey] = useState(createIdempotencyKey);
-  const summary = summaryState.key === cartKey ? summaryState.summary : null;
-  const isSummaryLoading = items.length > 0 && summaryState.key !== cartKey;
+  const summary = isServerCart
+    ? serverSummary
+    : summaryState.key === cartKey
+      ? summaryState.summary
+      : null;
+  const isSummaryLoading =
+    !isCartLoaded ||
+    (items.length > 0 &&
+      (isServerCart ? !serverSummary : summaryState.key !== cartKey));
   const canSubmit =
     items.length > 0 &&
     (summary?.issues.length ?? 1) === 0 &&
     !isSubmitting;
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (isServerCart || items.length === 0) {
       return;
     }
 
@@ -116,7 +128,7 @@ export function CheckoutClient({
       });
 
     return () => controller.abort();
-  }, [cartKey, items]);
+  }, [cartKey, isServerCart, items]);
 
   const estimatedVatHalalas = useMemo(
     () => calculateVatHalalas(summary?.estimatedSubtotalHalalas ?? 0),
@@ -161,9 +173,10 @@ export function CheckoutClient({
         `saha-order-${payload.order.publicOrderId}`,
         JSON.stringify(payload.order),
       );
-      setIsRedirecting(true);
-      clearCart();
-      window.location.assign(
+      if (!isServerCart) {
+        clearCart();
+      }
+      window.location.replace(
         `/order-confirmation?order=${encodeURIComponent(
           payload.order.publicOrderId,
         )}`,
@@ -171,13 +184,11 @@ export function CheckoutClient({
     } catch {
       setErrors({ order: "Unable to place order. Try again shortly." });
     } finally {
-      if (!isRedirecting) {
-        setIsSubmitting(false);
-      }
+      setIsSubmitting(false);
     }
   }
 
-  if (isRedirecting) {
+  if (!isCartLoaded) {
     return (
       <div className="mt-10 rounded-lg border border-zinc-200 bg-white p-8 text-center">
         <Loader2
@@ -185,11 +196,8 @@ export function CheckoutClient({
           className="mx-auto size-10 animate-spin text-emerald-700"
         />
         <h2 className="mt-4 text-2xl font-black text-zinc-950">
-          Redirecting to confirmation
+          Loading your cart
         </h2>
-        <p className="mt-2 text-zinc-600">
-          Your COD order was created. We are opening your confirmation page.
-        </p>
       </div>
     );
   }
