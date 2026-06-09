@@ -190,7 +190,7 @@ export function CheckoutClient({
 
   if (!isCartLoaded) {
     return (
-      <div className="mt-10 rounded-lg border border-zinc-200 bg-white p-8 text-center">
+      <div className="premium-panel mt-10 rounded-2xl p-8 text-center">
         <Loader2
           aria-hidden="true"
           className="mx-auto size-10 animate-spin text-emerald-700"
@@ -204,7 +204,7 @@ export function CheckoutClient({
 
   if (items.length === 0) {
     return (
-      <div className="mt-10 rounded-lg border border-zinc-200 bg-white p-8 text-center">
+      <div className="premium-panel mt-10 rounded-2xl p-8 text-center">
         <ShoppingBag aria-hidden="true" className="mx-auto size-10 text-zinc-300" />
         <h2 className="mt-4 text-2xl font-black text-zinc-950">
           Your cart is empty
@@ -226,9 +226,12 @@ export function CheckoutClient({
     <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_0.82fr]">
       <form
         onSubmit={handleSubmit}
-        className="rounded-lg border border-zinc-200 bg-white p-5 sm:p-6"
+        className="premium-panel rounded-2xl p-5 sm:p-6"
       >
-        <h2 className="text-2xl font-black text-zinc-950">Delivery details</h2>
+        <p className="editorial-kicker">COD checkout</p>
+        <h2 className="mt-2 text-2xl font-black text-zinc-950">
+          Delivery details
+        </h2>
         <div className="mt-6 grid gap-5">
           {savedAddresses.length > 1 ? (
             <label className="grid gap-2">
@@ -253,7 +256,7 @@ export function CheckoutClient({
                     });
                   }
                 }}
-                className="h-12 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
+                className="h-12 rounded-full border border-stone-300 bg-white px-4 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
               >
                 <option value="">Custom delivery details</option>
                 {savedAddresses.map((address) => (
@@ -329,7 +332,7 @@ export function CheckoutClient({
               required
               rows={4}
               autoComplete="street-address"
-              className="resize-none rounded-lg border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
+              className="resize-none rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
             />
             {errors.deliveryAddress ? (
               <ErrorText>{errors.deliveryAddress}</ErrorText>
@@ -342,7 +345,7 @@ export function CheckoutClient({
             <textarea
               name="notes"
               rows={3}
-              className="resize-none rounded-lg border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
+              className="resize-none rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
             />
           </label>
         </div>
@@ -367,8 +370,9 @@ export function CheckoutClient({
         </button>
       </form>
 
-      <aside className="h-fit rounded-lg border border-zinc-200 bg-white p-5 sm:p-6">
-        <h2 className="text-2xl font-black text-zinc-950">Order summary</h2>
+      <aside className="premium-panel h-fit rounded-2xl p-5 sm:p-6 lg:sticky lg:top-32">
+        <p className="editorial-kicker">Secure total</p>
+        <h2 className="mt-2 text-2xl font-black text-zinc-950">Order summary</h2>
         {isSummaryLoading ? (
           <div className="mt-6 space-y-4">
             {items.map((item) => (
@@ -382,7 +386,7 @@ export function CheckoutClient({
             <div className="mt-6 space-y-5">
               {summary.items.map((item) => (
                 <div key={item.productId} className="flex gap-4">
-                  <div className="relative size-20 overflow-hidden rounded-lg bg-zinc-100">
+                  <div className="relative size-20 overflow-hidden rounded-2xl bg-zinc-100">
                     <Image
                       src={item.imageUrl}
                       alt={item.imageAlt}
@@ -455,7 +459,7 @@ function Field({
       <span className="text-sm font-bold text-zinc-950">{label}</span>
       <input
         name={name}
-        className="h-12 rounded-full border border-zinc-200 px-4 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
+        className="h-12 rounded-full border border-stone-300 bg-white px-4 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
         {...props}
       />
       {error ? <ErrorText>{error}</ErrorText> : null}

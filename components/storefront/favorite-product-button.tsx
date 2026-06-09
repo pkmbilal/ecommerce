@@ -23,8 +23,8 @@ export function FavoriteProductButton({
         aria-pressed={isFavorite}
         className={`inline-flex items-center justify-center gap-2 rounded-full border font-bold transition ${
           isFavorite
-            ? "border-rose-200 bg-rose-50 text-rose-700"
-            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-950"
+            ? "border-rose-200 bg-rose-50 text-rose-700 shadow-sm"
+            : "border-stone-300 bg-white/90 text-zinc-700 shadow-sm hover:border-zinc-950 hover:text-zinc-950"
         } ${compact ? "size-10" : "h-12 px-5 text-sm"}`}
       >
         <Heart

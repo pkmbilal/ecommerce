@@ -49,12 +49,18 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   return (
     <>
       <SiteHeader />
-      <main className="bg-[#fbfaf7]">
+      <main className="bg-[#f8f5ef]">
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <SectionHeader
-            kicker="Catalog"
-            title={category ? "Filtered products" : "All products"}
-          />
+          <div className="rounded-[1.75rem] border border-stone-200 bg-white/65 p-5 shadow-[0_24px_70px_-54px_rgba(20,18,15,0.75)] sm:p-8">
+            <SectionHeader
+              kicker="Catalog"
+              title={category ? "Filtered products" : "All products"}
+            />
+            <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600">
+              Browse refined essentials with SAR pricing, COD checkout, and
+              clear checkout details.
+            </p>
+          </div>
 
           <nav
             aria-label="Product categories"
@@ -97,7 +103,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               ))}
             </div>
           ) : (
-            <div className="mt-8 rounded-lg border border-zinc-200 bg-white p-8 text-center">
+            <div className="premium-panel mt-8 rounded-2xl p-8 text-center">
               <h2 className="text-2xl font-black text-zinc-950">
                 No products found
               </h2>
@@ -146,8 +152,8 @@ function CategoryLink({
       aria-current={isActive ? "page" : undefined}
       className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${
         isActive
-          ? "bg-zinc-950 text-white"
-          : "border border-zinc-200 bg-white text-zinc-700 hover:border-zinc-950"
+          ? "bg-zinc-950 text-white shadow-[0_14px_30px_-22px_rgba(20,18,15,0.8)]"
+          : "border border-stone-300 bg-white/80 text-zinc-700 hover:border-zinc-950 hover:bg-white"
       }`}
     >
       {children}

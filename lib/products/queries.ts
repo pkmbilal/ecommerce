@@ -151,13 +151,33 @@ export const getCategories = cache(async (): Promise<ProductCategory[]> => {
   }));
 });
 
-export const getCategoryTiles = cache(async (): Promise<CategoryTile[]> => {
+type CategoryTileOptions = {
+  limit?: number;
+};
+
+export const getCategoryTiles = cache(async (
+  options: CategoryTileOptions = {},
+): Promise<CategoryTile[]> => {
   const fallbackImagesBySlug = new Map(
     fallbackCategories.map((category) => [category.slug, category.imageUrl]),
   );
-  const categories = await getCategories();
+  const categoriesBySlug = new Map(
+    (await getCategories()).map((category) => [category.slug, category]),
+  );
 
-  return categories.slice(0, 3).map((category, index) => ({
+  for (const category of fallbackCategories) {
+    if (!categoriesBySlug.has(category.slug)) {
+      categoriesBySlug.set(category.slug, {
+        id: category.slug,
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
+      });
+    }
+  }
+
+  const categories = Array.from(categoriesBySlug.values());
+  const tiles = categories.map((category, index) => ({
     name: category.name,
     slug: category.slug,
     description: category.description,
@@ -165,6 +185,8 @@ export const getCategoryTiles = cache(async (): Promise<CategoryTile[]> => {
       fallbackImagesBySlug.get(category.slug) ??
       fallbackCategories[index % fallbackCategories.length].imageUrl,
   }));
+
+  return typeof options.limit === "number" ? tiles.slice(0, options.limit) : tiles;
 });
 
 export const getProductBySlug = cache(

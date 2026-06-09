@@ -33,18 +33,18 @@ export default async function CheckoutPage() {
   return (
     <>
       <SiteHeader />
-      <main className="bg-[#fbfaf7]">
+      <main className="bg-[#f8f5ef]">
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <p className="text-sm font-bold uppercase tracking-wide text-emerald-800">
-            Cash on delivery
-          </p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight text-zinc-950 sm:text-5xl">
-            Checkout
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-8 text-zinc-700">
-            Enter Saudi delivery details. Final totals and inventory are
-            recalculated on the server before your COD order is created.
-          </p>
+          <div className="rounded-[1.75rem] border border-stone-200 bg-white/65 p-5 shadow-[0_24px_70px_-54px_rgba(20,18,15,0.75)] sm:p-8">
+            <p className="editorial-kicker">Cash on delivery</p>
+            <h1 className="mt-3 text-4xl font-black tracking-tight text-zinc-950 sm:text-5xl">
+              Checkout
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-8 text-zinc-700">
+              Enter Saudi delivery details. Final totals and inventory are
+              recalculated on the server before your COD order is created.
+            </p>
+          </div>
           <CheckoutClient
             savedAddresses={addresses.map((address) => ({
               id: address.id,
