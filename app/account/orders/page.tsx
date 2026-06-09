@@ -36,7 +36,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
       title="Orders"
       subtitle="Track cash on delivery orders placed while signed in."
     >
-      <AdminPanel title="Order history" description="Guest orders are not linked here.">
+      <AdminPanel title="Order history" description="Signed-in COD orders appear here.">
         {orders.items.length > 0 ? (
           <div className="divide-y divide-gray-200">
             {orders.items.map((order) => (

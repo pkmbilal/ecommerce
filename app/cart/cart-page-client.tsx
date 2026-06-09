@@ -88,8 +88,9 @@ export function CartPageClient() {
             Review your bag
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-zinc-700">
-            Confirm quantities before checkout. Final SAR totals, VAT, delivery,
-            and stock are recalculated on the server.
+            Confirm quantities before checkout. Sign in is required before COD
+            order creation, and final SAR totals, VAT, delivery, and stock are
+            recalculated on the server.
           </p>
         </div>
         {items.length > 0 ? (

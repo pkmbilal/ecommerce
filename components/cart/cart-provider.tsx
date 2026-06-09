@@ -425,7 +425,8 @@ function CartDrawer() {
           </div>
           <p className="mt-2 text-xs leading-5 text-zinc-500">
             Estimate only. Final SAR totals, VAT, delivery fees, and stock are
-            recalculated server-side at checkout.
+            recalculated server-side at checkout. Sign in is required to place
+            a COD order.
           </p>
           <Link
             href="/cart"

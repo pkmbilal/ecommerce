@@ -17,18 +17,31 @@ export async function POST(request: Request) {
   }
 
   const profile = await getCurrentProfile();
+
+  if (!profile) {
+    return Response.json(
+      { errors: { order: "Sign in before checkout." } },
+      { status: 401 },
+    );
+  }
+
+  if (profile.role !== "customer") {
+    return Response.json(
+      { errors: { order: "Customer account required for checkout." } },
+      { status: 403 },
+    );
+  }
+
   const validation = validateCheckoutInput(
     body && typeof body === "object" ? body : {},
-    { requireItems: !profile },
+    { requireItems: false },
   );
 
   if (!validation.success) {
     return Response.json({ errors: validation.errors }, { status: 400 });
   }
 
-  const cartItems = profile
-    ? await getCustomerCartItems(profile.userId)
-    : validation.data.items;
+  const cartItems = await getCustomerCartItems(profile.userId);
   const summary = await summarizeCartItems(cartItems);
 
   if (summary.items.length === 0 || summary.issues.length > 0) {
@@ -48,11 +61,9 @@ export async function POST(request: Request) {
     const order = await placeCodOrder({
       ...validation.data,
       items: cartItems,
-      profileId: profile?.userId,
+      profileId: profile.userId,
     });
-    if (profile) {
-      await clearCustomerCart(profile.userId);
-    }
+    await clearCustomerCart(profile.userId);
     return Response.json({ order });
   } catch (error) {
     console.error("Failed to place COD order.", error);
