@@ -252,32 +252,54 @@ export default async function Home() {
         </section>
 
         <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-          <div className="rounded-[1.5rem] bg-zinc-950 px-5 py-8 text-white shadow-[0_30px_80px_-42px_rgba(20,18,15,0.9)] sm:px-8 lg:flex lg:items-center lg:justify-between">
-            <div>
+          <div className="grid overflow-hidden rounded-[1.5rem] bg-zinc-950 text-white shadow-[0_30px_80px_-42px_rgba(20,18,15,0.9)] lg:grid-cols-[0.92fr_1.08fr]">
+            <MotionReveal className="flex flex-col justify-center px-5 py-8 sm:px-8 lg:px-10">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
-                Style notes
+                Featured collection
               </p>
-              <h2 className="mt-2 max-w-xl text-3xl font-black tracking-tight">
-                Get new drops and delivery updates in your inbox.
+              <h2 className="mt-3 max-w-xl text-3xl font-black tracking-tight sm:text-4xl">
+                Luxury perfume and watch picks for polished gifting.
               </h2>
-            </div>
-            <form className="mt-6 flex flex-col gap-3 sm:flex-row lg:mt-0">
-              <label htmlFor="newsletter-email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="newsletter-email"
-                type="email"
-                placeholder="Email address"
-                className="h-12 min-w-0 rounded-full bg-white px-5 text-sm font-semibold text-zinc-950 outline-none placeholder:text-zinc-500 sm:w-80"
-              />
-              <button
-                type="submit"
-                className="h-12 rounded-full bg-emerald-700 px-6 text-sm font-black text-white transition hover:bg-emerald-600"
-              >
-                Subscribe
-              </button>
-            </form>
+              <p className="mt-4 max-w-lg text-sm font-semibold leading-7 text-white/70 sm:text-base">
+                Explore refined statement pieces with clear SAR pricing,
+                premium presentation, and simple Saudi delivery.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/products"
+                  className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-black text-zinc-950 transition hover:bg-emerald-300"
+                >
+                  Shop the edit
+                </Link>
+                <Link
+                  href="/categories"
+                  className="inline-flex h-12 items-center justify-center rounded-full border border-white/20 px-6 text-sm font-black text-white transition hover:border-white hover:bg-white/10"
+                >
+                  View categories
+                </Link>
+              </div>
+            </MotionReveal>
+
+            <MotionReveal delay={0.08} className="grid min-h-[300px] grid-cols-2 gap-0 lg:min-h-[360px]">
+              <div className="relative min-h-[300px] lg:min-h-[360px]">
+                <Image
+                  src={heroImages.main}
+                  alt="Luxury perfume bottle featured collection"
+                  fill
+                  sizes="(max-width: 1024px) 50vw, 34vw"
+                  className="object-cover"
+                />
+              </div>
+              <div className="relative min-h-[300px] border-l border-white/10 lg:min-h-[360px]">
+                <Image
+                  src={heroImages.secondary}
+                  alt="Luxury watch featured collection"
+                  fill
+                  sizes="(max-width: 1024px) 50vw, 34vw"
+                  className="object-cover"
+                />
+              </div>
+            </MotionReveal>
           </div>
         </section>
       </main>
