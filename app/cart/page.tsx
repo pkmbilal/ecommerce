@@ -14,7 +14,7 @@ export default function CartPage() {
   return (
     <>
       <SiteHeader />
-      <main className="bg-[#fbfaf7]">
+      <main className="bg-[#f8f5ef]">
         <CartPageClient />
       </main>
     </>

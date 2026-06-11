@@ -24,10 +24,8 @@ export const navItems = ["New Arrivals", "Best Sellers", "Abayas", "Accessories"
 export const brandStrip = ["NOIR", "DUNE", "SAFFRON", "MODA", "RIYADH"];
 
 export const heroImages = {
-  main:
-    "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1100&q=85",
-  secondary:
-    "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85",
+  main: "/hero-perfume-luxury.png",
+  secondary: "/hero-watch-luxury.png",
 };
 
 export const products: Product[] = [
@@ -35,6 +33,7 @@ export const products: Product[] = [
     id: "linen-abaya-black",
     title: "Linen Blend Everyday Abaya",
     category: "Abayas",
+    categorySlug: "abayas",
     rating: 4.8,
     reviews: 128,
     priceHalalas: 24900,
@@ -48,6 +47,7 @@ export const products: Product[] = [
     id: "woven-tote-sand",
     title: "Structured Woven Tote",
     category: "Bags",
+    categorySlug: "bags",
     rating: 4.7,
     reviews: 74,
     priceHalalas: 17900,
@@ -59,6 +59,7 @@ export const products: Product[] = [
     id: "cotton-shirt-ivory",
     title: "Relaxed Cotton Poplin Shirt",
     category: "Tops",
+    categorySlug: "tops",
     rating: 4.6,
     reviews: 96,
     priceHalalas: 13900,
@@ -71,6 +72,7 @@ export const products: Product[] = [
     id: "satin-scarf-olive",
     title: "Soft Satin Square Scarf",
     category: "Scarves",
+    categorySlug: "scarves",
     rating: 4.9,
     reviews: 211,
     priceHalalas: 6900,
@@ -83,6 +85,7 @@ export const products: Product[] = [
     id: "pleated-set-charcoal",
     title: "Pleated Travel Co-ord Set",
     category: "Sets",
+    categorySlug: "sets",
     rating: 4.8,
     reviews: 142,
     priceHalalas: 28900,
@@ -95,6 +98,7 @@ export const products: Product[] = [
     id: "leather-sandals-tan",
     title: "Minimal Leather Sandals",
     category: "Footwear",
+    categorySlug: "footwear",
     rating: 4.5,
     reviews: 58,
     priceHalalas: 15900,
@@ -106,11 +110,18 @@ export const products: Product[] = [
 
 export const categories: CategoryTile[] = [
   {
-    name: "Modest Essentials",
+    name: "Abayas",
     slug: "abayas",
-    description: "Modest layers and everyday abayas.",
+    description: "Refined modest layers for everyday wear.",
     imageUrl:
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=85",
+      "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    name: "Bags",
+    slug: "bags",
+    description: "Structured carry pieces with polished texture.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=900&q=85",
   },
   {
     name: "Workwear",
@@ -120,11 +131,25 @@ export const categories: CategoryTile[] = [
       "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=85",
   },
   {
-    name: "Weekend Edits",
+    name: "Scarves",
+    slug: "scarves",
+    description: "Soft satin accents for complete looks.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    name: "Weekend Sets",
     slug: "sets",
     description: "Coordinated pieces for travel and weekends.",
     imageUrl:
       "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    name: "Footwear",
+    slug: "footwear",
+    description: "Minimal sandals and easy finishing pieces.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=900&q=85",
   },
 ];
 

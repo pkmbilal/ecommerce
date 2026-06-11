@@ -79,9 +79,9 @@ export function CartPageClient() {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-4 border-b border-zinc-200 pb-8 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-[1.75rem] border border-stone-200 bg-white/65 p-5 shadow-[0_24px_70px_-54px_rgba(20,18,15,0.75)] sm:flex-row sm:items-end sm:justify-between sm:p-8">
         <div>
-          <p className="text-sm font-bold uppercase tracking-wide text-emerald-800">
+          <p className="editorial-kicker">
             Shopping cart
           </p>
           <h1 className="mt-3 text-4xl font-black tracking-tight text-zinc-950 sm:text-5xl">
@@ -97,7 +97,7 @@ export function CartPageClient() {
           <button
             type="button"
             onClick={clearCart}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-zinc-300 px-5 text-sm font-bold text-zinc-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-stone-300 bg-white/80 px-5 text-sm font-bold text-zinc-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
           >
             <Trash2 aria-hidden="true" className="size-4" />
             Clear cart
@@ -106,7 +106,7 @@ export function CartPageClient() {
       </div>
 
       {!isLoaded ? (
-        <div className="mt-10 rounded-lg border border-zinc-200 bg-white p-8">
+        <div className="premium-panel mt-10 rounded-2xl p-8">
           <div className="h-8 w-44 animate-pulse rounded bg-zinc-100" />
           <div className="mt-6 space-y-4">
             <div className="h-28 animate-pulse rounded-lg bg-zinc-100" />
@@ -116,7 +116,7 @@ export function CartPageClient() {
       ) : null}
 
       {isLoaded && items.length === 0 ? (
-        <div className="mt-10 rounded-lg border border-zinc-200 bg-white p-8 text-center">
+        <div className="premium-panel mt-10 rounded-2xl p-8 text-center">
           <ShoppingBag aria-hidden="true" className="mx-auto size-11 text-zinc-300" />
           <h2 className="mt-4 text-2xl font-black text-zinc-950">
             Your cart is empty
@@ -135,7 +135,7 @@ export function CartPageClient() {
 
       {isLoaded && items.length > 0 ? (
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="rounded-lg border border-zinc-200 bg-white">
+          <div className="premium-panel overflow-hidden rounded-2xl">
             {isSummaryLoading ? (
               <div className="space-y-4 p-5 sm:p-6">
                 {items.map((item) => (
@@ -154,7 +154,7 @@ export function CartPageClient() {
                     key={item.productId}
                     className="grid gap-4 p-5 sm:grid-cols-[112px_minmax(0,1fr)_auto] sm:p-6"
                   >
-                    <div className="relative aspect-square w-28 overflow-hidden rounded-lg bg-zinc-100">
+                    <div className="relative aspect-square w-28 overflow-hidden rounded-2xl bg-zinc-100">
                       <Image
                         src={item.imageUrl}
                         alt={item.imageAlt}
@@ -219,8 +219,8 @@ export function CartPageClient() {
             ) : null}
           </div>
 
-          <aside className="h-fit rounded-lg border border-zinc-200 bg-white p-5 sm:p-6">
-            <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">
+          <aside className="premium-panel h-fit rounded-2xl p-5 sm:p-6 lg:sticky lg:top-32">
+            <p className="editorial-kicker">
               COD order
             </p>
             <h2 className="mt-2 text-2xl font-black text-zinc-950">

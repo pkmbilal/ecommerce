@@ -25,23 +25,24 @@ export function ProductCard({
 
   return (
     <article className="group flex h-full flex-col">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-stone-100">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.35rem] bg-stone-100 shadow-[0_24px_60px_-44px_rgba(20,18,15,0.75)] ring-1 ring-stone-200/70">
         <Link href={`/products/${product.id}`} className="absolute inset-0">
           <Image
             src={product.imageUrl}
             alt={product.imageAlt}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover transition duration-500 group-hover:scale-105"
+            className="object-cover transition duration-700 group-hover:scale-[1.04]"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/10 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
           <div className="absolute left-3 top-3 flex flex-wrap gap-2">
             {product.badge ? (
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-zinc-950 shadow-sm">
+              <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-black text-zinc-950 shadow-sm ring-1 ring-stone-200/80">
                 {product.badge}
               </span>
             ) : null}
             {discount ? (
-              <span className="rounded-full bg-rose-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
+              <span className="rounded-full bg-rose-700 px-3 py-1 text-xs font-black text-white shadow-sm">
                 -{discount}%
               </span>
             ) : null}
@@ -59,16 +60,16 @@ export function ProductCard({
 
       <div className="flex flex-1 flex-col gap-3 pt-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-800">
             {product.category}
           </p>
-          <h3 className="mt-1 min-h-12 text-base font-bold leading-6 text-zinc-950 transition group-hover:text-emerald-800">
+          <h3 className="mt-1 min-h-12 text-base font-black leading-6 text-zinc-950 transition group-hover:text-emerald-800">
             <Link href={`/products/${product.id}`}>{product.title}</Link>
           </h3>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-zinc-600">
-          <span className="flex items-center gap-0.5 text-amber-500">
+        <div className="flex items-center gap-2 text-sm font-semibold text-zinc-600">
+          <span className="flex items-center gap-0.5 text-amber-500" aria-label={`${product.rating} out of 5 stars`}>
             {Array.from({ length: 5 }, (_, index) => (
               <Star
                 key={index}
@@ -88,7 +89,7 @@ export function ProductCard({
 
         <div className="mt-auto flex items-end justify-between gap-3">
           <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-xl font-black text-zinc-950">
+            <span className="text-xl font-black tracking-tight text-zinc-950">
               {formatSar(product.priceHalalas)}
             </span>
             {product.compareAtPriceHalalas ? (

@@ -67,11 +67,11 @@ export default async function ProductDetailPage({
   return (
     <>
       <SiteHeader />
-      <main className="bg-[#fbfaf7]">
+      <main className="bg-[#f8f5ef]">
         <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <Link
             href="/products"
-            className="inline-flex items-center gap-2 text-sm font-bold text-zinc-700 transition hover:text-emerald-800"
+            className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white/80 px-4 py-2 text-sm font-bold text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
             Back to products
@@ -79,7 +79,7 @@ export default async function ProductDetailPage({
 
           <div className="mt-8 grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="grid gap-4 sm:grid-cols-[1fr_0.28fr]">
-              <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-zinc-200">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-zinc-200 shadow-[0_38px_90px_-50px_rgba(20,18,15,0.95)] ring-1 ring-stone-200/70">
                 <Image
                   src={primaryImage.url}
                   alt={primaryImage.alt}
@@ -93,7 +93,7 @@ export default async function ProductDetailPage({
                 {product.images.slice(0, 3).map((image) => (
                   <div
                     key={image.url}
-                    className="relative aspect-square overflow-hidden rounded-lg bg-zinc-200"
+                    className="relative aspect-square overflow-hidden rounded-2xl bg-zinc-200 shadow-[0_18px_45px_-34px_rgba(20,18,15,0.75)] ring-1 ring-stone-200/70"
                   >
                     <Image
                       src={image.url}
@@ -108,7 +108,7 @@ export default async function ProductDetailPage({
             </div>
 
             <div className="flex flex-col justify-center">
-              <p className="text-sm font-bold uppercase tracking-wide text-emerald-800">
+              <p className="editorial-kicker">
                 {product.category}
               </p>
               <h1 className="mt-3 text-4xl font-black tracking-tight text-zinc-950 sm:text-5xl">
@@ -134,7 +134,7 @@ export default async function ProductDetailPage({
               </div>
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <span className="text-3xl font-black text-zinc-950">
+                <span className="text-3xl font-black tracking-tight text-zinc-950">
                   {formatSar(product.priceHalalas)}
                 </span>
                 {product.compareAtPriceHalalas ? (
@@ -143,7 +143,7 @@ export default async function ProductDetailPage({
                   </span>
                 ) : null}
                 {discount ? (
-                  <span className="rounded-full bg-rose-600 px-3 py-1 text-sm font-bold text-white">
+                  <span className="rounded-full bg-rose-700 px-3 py-1 text-sm font-black text-white">
                     -{discount}%
                   </span>
                 ) : null}
@@ -168,7 +168,7 @@ export default async function ProductDetailPage({
               </div>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-zinc-200 bg-white p-4">
+                <div className="premium-panel rounded-2xl p-4">
                   <Truck aria-hidden="true" className="size-5 text-emerald-800" />
                   <p className="mt-3 text-sm font-bold text-zinc-950">
                     Cash on delivery
@@ -177,7 +177,7 @@ export default async function ProductDetailPage({
                     COD available across Saudi Arabia.
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-200 bg-white p-4">
+                <div className="premium-panel rounded-2xl p-4">
                   <ShieldCheck
                     aria-hidden="true"
                     className="size-5 text-emerald-800"
