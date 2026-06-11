@@ -21,6 +21,10 @@ const {
 const {
   validateProductImageFile,
 } = require("../lib/media/product-image-files.ts");
+const {
+  checkRateLimit,
+  resetRateLimitForTests,
+} = require("../lib/security/rate-limit.ts");
 
 const root = path.resolve(__dirname, "..");
 
@@ -360,6 +364,38 @@ test("validates admin product image files", () => {
   assert.throws(
     () => validateProductImageFile(oversizedFile),
     /5 MB or smaller/,
+  );
+});
+
+test("rate limiter blocks repeated requests per subject and client IP", () => {
+  resetRateLimitForTests();
+
+  const request = new Request("https://saha.test/api/checkout", {
+    headers: {
+      "x-forwarded-for": "203.0.113.10",
+    },
+  });
+  const rule = {
+    name: "test-checkout",
+    maxAttempts: 2,
+    windowMs: 60_000,
+  };
+
+  assert.equal(
+    checkRateLimit({ request, rule, subject: "customer-1" }).allowed,
+    true,
+  );
+  assert.equal(
+    checkRateLimit({ request, rule, subject: "customer-1" }).allowed,
+    true,
+  );
+  assert.equal(
+    checkRateLimit({ request, rule, subject: "customer-1" }).allowed,
+    false,
+  );
+  assert.equal(
+    checkRateLimit({ request, rule, subject: "customer-2" }).allowed,
+    true,
   );
 });
 

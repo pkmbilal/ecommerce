@@ -1,11 +1,25 @@
 import type { CartItemInput } from "@/lib/cart/types";
 import { summarizeCartItems } from "@/lib/cart/validation";
+import {
+  checkRateLimit,
+  rateLimitedJson,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 type CartSummaryRequestBody = {
   items?: CartItemInput[];
 };
 
 export async function POST(request: Request) {
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.cartSummary,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedJson(rateLimit);
+  }
+
   let body: CartSummaryRequestBody;
 
   try {

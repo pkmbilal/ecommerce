@@ -6,11 +6,31 @@ import {
   applyAdminProductBulkAction,
   parseProductBulkActionFormData,
 } from "@/lib/admin/catalog";
+import {
+  checkRateLimit,
+  rateLimitedRedirect,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   if (!(await hasAdminSession())) {
     return NextResponse.redirect(new URL("/login?next=/admin/products", request.url), {
       status: 303,
+    });
+  }
+
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.adminMutation,
+    subject: "products-bulk",
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedRedirect({
+      request,
+      path: "/admin/products",
+      result: rateLimit,
+      statusValue: "Too many product changes. Try again shortly.",
     });
   }
 

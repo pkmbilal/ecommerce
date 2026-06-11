@@ -222,12 +222,14 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 function StatusMessage({ status }: { status: string }) {
-  const isError = status === "address_error";
+  const isError = status === "address_error" || status === "rate_limited";
   const message =
     status === "address_deleted"
       ? "Address deleted."
       : status === "address_default"
         ? "Default address updated."
+        : status === "rate_limited"
+          ? "Too many updates. Wait a minute and try again."
         : isError
           ? "Check your address details and try again."
           : "Address saved.";

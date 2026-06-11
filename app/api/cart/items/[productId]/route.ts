@@ -5,6 +5,11 @@ import {
   removeCustomerCartItem,
   updateCustomerCartItem,
 } from "@/lib/cart/customer-cart";
+import {
+  checkRateLimit,
+  rateLimitedJson,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 type UpdateCartItemRequestBody = {
   quantity?: unknown;
@@ -21,6 +26,16 @@ export async function PATCH(request: Request, context: CartItemRouteContext) {
 
   if (!profile) {
     return Response.json({ error: "Sign in to update database cart." }, { status: 401 });
+  }
+
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.cartWrite,
+    subject: profile.userId,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedJson(rateLimit);
   }
 
   let body: UpdateCartItemRequestBody;
@@ -55,11 +70,21 @@ export async function PATCH(request: Request, context: CartItemRouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: CartItemRouteContext) {
+export async function DELETE(request: Request, context: CartItemRouteContext) {
   const profile = await getCurrentProfile();
 
   if (!profile) {
     return Response.json({ error: "Sign in to update database cart." }, { status: 401 });
+  }
+
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.cartWrite,
+    subject: profile.userId,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedJson(rateLimit);
   }
 
   const { productId } = await context.params;

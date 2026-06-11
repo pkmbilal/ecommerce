@@ -6,6 +6,11 @@ import {
 } from "@/lib/cart/customer-cart";
 import { placeCodOrder } from "@/lib/checkout/place-order";
 import { validateCheckoutInput } from "@/lib/checkout/validation";
+import {
+  checkRateLimit,
+  rateLimitedJson,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -29,6 +34,19 @@ export async function POST(request: Request) {
     return Response.json(
       { errors: { order: "Customer account required for checkout." } },
       { status: 403 },
+    );
+  }
+
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.checkout,
+    subject: profile.userId,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedJson(
+      rateLimit,
+      "Too many checkout attempts. Try again shortly.",
     );
   }
 

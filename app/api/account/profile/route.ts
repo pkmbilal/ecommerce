@@ -5,9 +5,29 @@ import { requireCustomerDashboardSession } from "@/lib/admin/auth";
 import { updateCustomerProfile } from "@/lib/customer/account";
 import { validateProfileForm } from "@/lib/customer/validation";
 import { uploadProfileAvatarToR2 } from "@/lib/media/r2-upload";
+import {
+  checkRateLimit,
+  rateLimitedRedirect,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   const profile = await requireCustomerDashboardSession();
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.accountMutation,
+    subject: profile.userId,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedRedirect({
+      request,
+      path: "/account/profile",
+      result: rateLimit,
+      statusParam: "status",
+    });
+  }
+
   const formData = await request.formData();
   const validation = validateProfileForm(formData);
 

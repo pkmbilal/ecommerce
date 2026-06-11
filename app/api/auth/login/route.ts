@@ -5,6 +5,11 @@ import {
   getSafeInternalPath,
   getSafeRoleRedirectPath,
 } from "@/lib/auth/redirects";
+import {
+  checkRateLimit,
+  rateLimitedRedirect,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createSupabaseAuthServerClient } from "@/lib/supabase/server";
 
@@ -13,6 +18,19 @@ export async function POST(request: Request) {
   const email = getText(formData, "email");
   const password = getText(formData, "password");
   const next = getSafeInternalPath(getText(formData, "next"));
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.login,
+    subject: email || "missing-email",
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedRedirect({
+      request,
+      path: "/login",
+      result: rateLimit,
+    });
+  }
 
   if (!getSupabasePublicEnv()) {
     return NextResponse.redirect(new URL("/login?error=setup", request.url), {

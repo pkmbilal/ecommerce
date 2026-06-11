@@ -5,6 +5,11 @@ import {
   type AdminOrderStatus,
   transitionAdminOrderStatus,
 } from "@/lib/admin/orders";
+import {
+  checkRateLimit,
+  rateLimitedRedirect,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 const allowedStatuses = new Set<AdminOrderStatus>([
   "confirmed",
@@ -26,6 +31,22 @@ export async function POST(request: Request, context: StatusRouteContext) {
     });
   }
 
+  const { id } = await context.params;
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.adminMutation,
+    subject: `order:${id}`,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedRedirect({
+      request,
+      path: `/admin/orders/${id}`,
+      result: rateLimit,
+      statusValue: "Too many order status changes. Try again shortly.",
+    });
+  }
+
   const formData = await request.formData();
   const nextStatus = formData.get("nextStatus");
 
@@ -35,7 +56,6 @@ export async function POST(request: Request, context: StatusRouteContext) {
     });
   }
 
-  const { id } = await context.params;
   await transitionAdminOrderStatus(id, nextStatus);
 
   return NextResponse.redirect(new URL(`/admin/orders/${id}`, request.url), {

@@ -8,6 +8,11 @@ import {
   updateCustomerAddress,
 } from "@/lib/customer/account";
 import { validateAddressForm } from "@/lib/customer/validation";
+import {
+  checkRateLimit,
+  rateLimitedRedirect,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 export async function POST(
   request: Request,
@@ -15,6 +20,21 @@ export async function POST(
 ) {
   const profile = await requireCustomerDashboardSession();
   const { id } = await context.params;
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.accountMutation,
+    subject: profile.userId,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedRedirect({
+      request,
+      path: "/account/addresses",
+      result: rateLimit,
+      statusParam: "status",
+    });
+  }
+
   const formData = await request.formData();
   const intent = getText(formData, "intent");
 
