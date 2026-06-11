@@ -14,6 +14,7 @@ import {
 
 import { useCart } from "@/components/cart/cart-provider";
 import type { CartSummary } from "@/lib/cart/types";
+import { calculateDeliveryFeeHalalas } from "@/lib/delivery";
 import { formatSar } from "@/lib/money";
 import { calculateOrderTotalHalalas, calculateVatHalalas } from "@/lib/pricing";
 
@@ -216,9 +217,13 @@ export function CheckoutClient({
     () => calculateVatHalalas(summary?.estimatedSubtotalHalalas ?? 0),
     [summary?.estimatedSubtotalHalalas],
   );
+  const estimatedDeliveryHalalas = calculateDeliveryFeeHalalas(
+    summary?.estimatedSubtotalHalalas ?? 0,
+  );
   const estimatedTotalHalalas = calculateOrderTotalHalalas({
     subtotalHalalas: summary?.estimatedSubtotalHalalas ?? 0,
     vatHalalas: estimatedVatHalalas,
+    shippingHalalas: estimatedDeliveryHalalas,
   });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -558,7 +563,10 @@ export function CheckoutClient({
                 label="Estimated VAT"
                 value={formatSar(estimatedVatHalalas)}
               />
-              <SummaryRow label="Delivery" value={formatSar(0)} />
+              <SummaryRow
+                label="Delivery"
+                value={formatSar(estimatedDeliveryHalalas)}
+              />
               <SummaryRow
                 label="Estimated total"
                 value={formatSar(estimatedTotalHalalas)}
