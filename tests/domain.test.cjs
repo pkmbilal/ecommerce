@@ -25,6 +25,9 @@ const {
   checkRateLimit,
   resetRateLimitForTests,
 } = require("../lib/security/rate-limit.ts");
+const {
+  parseTurnstileVerificationResponse,
+} = require("../lib/security/turnstile.ts");
 
 const root = path.resolve(__dirname, "..");
 
@@ -397,6 +400,32 @@ test("rate limiter blocks repeated requests per subject and client IP", () => {
     checkRateLimit({ request, rule, subject: "customer-2" }).allowed,
     true,
   );
+});
+
+test("parses Turnstile verification responses", () => {
+  assert.deepEqual(
+    parseTurnstileVerificationResponse({
+      success: true,
+      "error-codes": [],
+    }),
+    { success: true },
+  );
+
+  assert.deepEqual(
+    parseTurnstileVerificationResponse({
+      success: false,
+      "error-codes": ["invalid-input-response"],
+    }),
+    {
+      success: false,
+      errorCodes: ["invalid-input-response"],
+    },
+  );
+
+  assert.deepEqual(parseTurnstileVerificationResponse(null), {
+    success: false,
+    errorCodes: ["invalid-response"],
+  });
 });
 
 test("customer dashboard migration adds owned addresses favorites and linked orders", () => {

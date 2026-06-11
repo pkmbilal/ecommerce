@@ -8,9 +8,15 @@ import { placeCodOrder } from "@/lib/checkout/place-order";
 import { validateCheckoutInput } from "@/lib/checkout/validation";
 import {
   checkRateLimit,
+  getClientIp,
   rateLimitedJson,
   rateLimitRules,
 } from "@/lib/security/rate-limit";
+import { verifyTurnstileToken } from "@/lib/security/turnstile";
+
+type CheckoutRequestBody = {
+  turnstileToken?: unknown;
+};
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -47,6 +53,26 @@ export async function POST(request: Request) {
     return rateLimitedJson(
       rateLimit,
       "Too many checkout attempts. Try again shortly.",
+    );
+  }
+
+  const turnstileToken =
+    body && typeof body === "object"
+      ? (body as CheckoutRequestBody).turnstileToken
+      : undefined;
+  const turnstile = await verifyTurnstileToken({
+    token: typeof turnstileToken === "string" ? turnstileToken : undefined,
+    remoteIp: getClientIp(request),
+  });
+
+  if (!turnstile.success) {
+    return Response.json(
+      {
+        errors: {
+          verification: "Complete the verification and try again.",
+        },
+      },
+      { status: 400 },
     );
   }
 

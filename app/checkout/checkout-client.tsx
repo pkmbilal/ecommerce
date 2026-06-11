@@ -3,7 +3,14 @@
 import { AlertCircle, CheckCircle2, Loader2, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Script from "next/script";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 
 import { useCart } from "@/components/cart/cart-provider";
 import type { CartSummary } from "@/lib/cart/types";
@@ -24,6 +31,7 @@ type CheckoutResponse = {
 };
 
 type CheckoutClientProps = {
+  turnstileSiteKey: string | null;
   savedAddresses?: SavedCheckoutAddress[];
   defaultValues?: {
     customerName?: string;
@@ -50,7 +58,29 @@ type CheckoutFormValues = {
   deliveryAddress: string;
 };
 
+type TurnstileWidgetId = string;
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: HTMLElement,
+        options: {
+          sitekey: string;
+          callback: (token: string) => void;
+          "expired-callback": () => void;
+          "error-callback": () => void;
+          theme?: "light" | "dark" | "auto";
+        },
+      ) => TurnstileWidgetId;
+      reset: (widgetId?: TurnstileWidgetId) => void;
+      remove: (widgetId: TurnstileWidgetId) => void;
+    };
+  }
+}
+
 export function CheckoutClient({
+  turnstileSiteKey,
   defaultValues,
   savedAddresses = [],
 }: CheckoutClientProps) {
@@ -82,6 +112,10 @@ export function CheckoutClient({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [idempotencyKey] = useState(createIdempotencyKey);
+  const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetIdRef = useRef<TurnstileWidgetId | null>(null);
+  const [isTurnstileScriptReady, setIsTurnstileScriptReady] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   const summary = isServerCart
     ? serverSummary
     : summaryState.key === cartKey
@@ -94,6 +128,8 @@ export function CheckoutClient({
   const canSubmit =
     items.length > 0 &&
     (summary?.issues.length ?? 1) === 0 &&
+    Boolean(turnstileSiteKey) &&
+    Boolean(turnstileToken) &&
     !isSubmitting;
 
   useEffect(() => {
@@ -130,6 +166,52 @@ export function CheckoutClient({
     return () => controller.abort();
   }, [cartKey, isServerCart, items]);
 
+  useEffect(() => {
+    if (
+      !turnstileSiteKey ||
+      !isTurnstileScriptReady ||
+      !turnstileContainerRef.current ||
+      !window.turnstile ||
+      turnstileWidgetIdRef.current
+    ) {
+      return;
+    }
+
+    const widgetId = window.turnstile.render(turnstileContainerRef.current, {
+      sitekey: turnstileSiteKey,
+      callback(token) {
+        setTurnstileToken(token);
+        setErrors((current) => {
+          const nextErrors = { ...current };
+          delete nextErrors.verification;
+
+          return nextErrors;
+        });
+      },
+      "expired-callback"() {
+        setTurnstileToken("");
+      },
+      "error-callback"() {
+        setTurnstileToken("");
+        setErrors((current) => ({
+          ...current,
+          verification: "Verification failed. Try again.",
+        }));
+      },
+      theme: "light",
+    });
+
+    turnstileWidgetIdRef.current = widgetId;
+
+    return () => {
+      if (window.turnstile && turnstileWidgetIdRef.current) {
+        window.turnstile.remove(turnstileWidgetIdRef.current);
+      }
+
+      turnstileWidgetIdRef.current = null;
+    };
+  }, [isTurnstileScriptReady, turnstileSiteKey]);
+
   const estimatedVatHalalas = useMemo(
     () => calculateVatHalalas(summary?.estimatedSubtotalHalalas ?? 0),
     [summary?.estimatedSubtotalHalalas],
@@ -141,6 +223,11 @@ export function CheckoutClient({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!turnstileToken) {
+      setErrors({ verification: "Complete the verification before checkout." });
+      return;
+    }
+
     setIsSubmitting(true);
     setErrors({});
 
@@ -159,6 +246,7 @@ export function CheckoutClient({
           deliveryAddress: formData.get("deliveryAddress"),
           cityRegion: formData.get("cityRegion"),
           notes: formData.get("notes"),
+          turnstileToken,
           items,
         }),
       });
@@ -166,6 +254,7 @@ export function CheckoutClient({
 
       if (!response.ok || !payload.order) {
         setErrors(payload.errors ?? { order: "Unable to place order." });
+        resetTurnstile();
         return;
       }
 
@@ -183,8 +272,17 @@ export function CheckoutClient({
       );
     } catch {
       setErrors({ order: "Unable to place order. Try again shortly." });
+      resetTurnstile();
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  function resetTurnstile() {
+    setTurnstileToken("");
+
+    if (window.turnstile && turnstileWidgetIdRef.current) {
+      window.turnstile.reset(turnstileWidgetIdRef.current);
     }
   }
 
@@ -224,6 +322,21 @@ export function CheckoutClient({
 
   return (
     <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_0.82fr]">
+      {turnstileSiteKey ? (
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+          strategy="afterInteractive"
+          onLoad={() => setIsTurnstileScriptReady(true)}
+          onError={() => {
+            setIsTurnstileScriptReady(false);
+            setTurnstileToken("");
+            setErrors((current) => ({
+              ...current,
+              verification: "Verification could not load. Refresh and try again.",
+            }));
+          }}
+        />
+      ) : null}
       <form
         onSubmit={handleSubmit}
         className="premium-panel rounded-2xl p-5 sm:p-6"
@@ -348,6 +461,25 @@ export function CheckoutClient({
               className="resize-none rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-950 outline-none transition focus:border-emerald-700"
             />
           </label>
+        </div>
+
+        <div className="mt-5 grid gap-2">
+          <span className="text-sm font-bold text-zinc-950">
+            Order verification
+          </span>
+          {turnstileSiteKey ? (
+            <div
+              ref={turnstileContainerRef}
+              className="min-h-[65px] overflow-hidden"
+            />
+          ) : (
+            <div className="rounded-lg bg-rose-50 p-4 text-sm font-semibold text-rose-700">
+              Checkout verification is not configured.
+            </div>
+          )}
+          {errors.verification ? (
+            <ErrorText>{errors.verification}</ErrorText>
+          ) : null}
         </div>
 
         {errors.items || errors.order ? (

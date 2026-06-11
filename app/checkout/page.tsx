@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/storefront/site-header";
 import { getCurrentProfile } from "@/lib/admin/auth";
 import { getCustomerProfile, listCustomerAddresses } from "@/lib/customer/account";
+import { getTurnstileSiteKey } from "@/lib/security/turnstile";
 
 import { CheckoutClient } from "./checkout-client";
 
@@ -29,6 +30,7 @@ export default async function CheckoutPage() {
     listCustomerAddresses(session.userId),
   ]);
   const defaultAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
+  const turnstileSiteKey = getTurnstileSiteKey();
 
   return (
     <>
@@ -46,6 +48,7 @@ export default async function CheckoutPage() {
             </p>
           </div>
           <CheckoutClient
+            turnstileSiteKey={turnstileSiteKey}
             savedAddresses={addresses.map((address) => ({
               id: address.id,
               label: address.label,
