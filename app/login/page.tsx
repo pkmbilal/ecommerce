@@ -116,5 +116,9 @@ function getErrorMessage(error: string) {
     return "Unable to create that account. Try a different email or password.";
   }
 
+  if (error === "rate_limited") {
+    return "Too many attempts. Wait a minute and try again.";
+  }
+
   return "Invalid email or password.";
 }

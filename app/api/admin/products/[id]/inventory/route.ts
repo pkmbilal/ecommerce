@@ -6,6 +6,11 @@ import {
   adjustAdminProductInventory,
   parseInventoryAdjustmentFormData,
 } from "@/lib/admin/catalog";
+import {
+  checkRateLimit,
+  rateLimitedRedirect,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 export async function POST(
   request: Request,
@@ -18,6 +23,21 @@ export async function POST(
   }
 
   const { id } = await context.params;
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.adminMutation,
+    subject: `inventory:${id}`,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedRedirect({
+      request,
+      path: `/admin/products/${id}`,
+      result: rateLimit,
+      statusValue: "Too many inventory changes. Try again shortly.",
+    });
+  }
+
   const formData = await request.formData();
 
   try {

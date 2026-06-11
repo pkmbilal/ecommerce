@@ -6,6 +6,11 @@ import {
   mergeCustomerCartItems,
 } from "@/lib/cart/customer-cart";
 import type { CartItemInput } from "@/lib/cart/types";
+import {
+  checkRateLimit,
+  rateLimitedJson,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 type AddCartItemRequestBody = {
   productId?: unknown;
@@ -18,6 +23,16 @@ export async function POST(request: Request) {
 
   if (!profile) {
     return Response.json({ error: "Sign in to update database cart." }, { status: 401 });
+  }
+
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.cartWrite,
+    subject: profile.userId,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedJson(rateLimit);
   }
 
   let body: AddCartItemRequestBody;

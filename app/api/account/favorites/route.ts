@@ -7,6 +7,11 @@ import {
   toggleCustomerFavoriteBySlug,
 } from "@/lib/customer/account";
 import { getSafeInternalPath } from "@/lib/auth/redirects";
+import {
+  checkRateLimit,
+  rateLimitedRedirect,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -22,6 +27,20 @@ export async function POST(request: Request) {
 
   if (profile.role === "admin") {
     return NextResponse.redirect(new URL("/admin", request.url), { status: 303 });
+  }
+
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.accountMutation,
+    subject: profile.userId,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedRedirect({
+      request,
+      path: returnTo,
+      result: rateLimit,
+    });
   }
 
   const intent = getText(formData, "intent");

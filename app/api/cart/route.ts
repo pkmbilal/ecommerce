@@ -4,6 +4,11 @@ import {
   getCustomerCartItems,
   getCustomerCartSummary,
 } from "@/lib/cart/customer-cart";
+import {
+  checkRateLimit,
+  rateLimitedJson,
+  rateLimitRules,
+} from "@/lib/security/rate-limit";
 
 export async function GET() {
   const profile = await getCurrentProfile();
@@ -29,11 +34,21 @@ export async function GET() {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const profile = await getCurrentProfile();
 
   if (!profile) {
     return Response.json({ error: "Sign in to clear database cart." }, { status: 401 });
+  }
+
+  const rateLimit = checkRateLimit({
+    request,
+    rule: rateLimitRules.cartWrite,
+    subject: profile.userId,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitedJson(rateLimit);
   }
 
   try {
