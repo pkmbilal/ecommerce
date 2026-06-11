@@ -5,6 +5,11 @@ const test = require("node:test");
 
 const { formatSar, calculateDiscountPercent } = require("../lib/money.ts");
 const {
+  FREE_DELIVERY_THRESHOLD_HALALAS,
+  STANDARD_DELIVERY_FEE_HALALAS,
+  calculateDeliveryFeeHalalas,
+} = require("../lib/delivery.ts");
+const {
   SAUDI_VAT_RATE_BPS,
   calculateOrderTotalHalalas,
   calculateVatHalalas,
@@ -57,6 +62,33 @@ test("calculates Saudi VAT and totals in halalas", () => {
       shippingHalalas: 2500,
     }),
     14000,
+  );
+});
+
+test("calculates COD delivery fees in halalas", () => {
+  assert.equal(STANDARD_DELIVERY_FEE_HALALAS, 2500);
+  assert.equal(FREE_DELIVERY_THRESHOLD_HALALAS, 25000);
+  assert.equal(calculateDeliveryFeeHalalas(0), 0);
+  assert.equal(calculateDeliveryFeeHalalas(1), 2500);
+  assert.equal(calculateDeliveryFeeHalalas(24999), 2500);
+  assert.equal(calculateDeliveryFeeHalalas(25000), 0);
+  assert.equal(calculateDeliveryFeeHalalas(30000), 0);
+  assert.throws(() => calculateDeliveryFeeHalalas(-1), /subtotalHalalas/);
+});
+
+test("calculates order totals with COD delivery fee", () => {
+  const subtotalHalalas = 18000;
+  const vatHalalas = calculateVatHalalas(subtotalHalalas);
+  const shippingHalalas = calculateDeliveryFeeHalalas(subtotalHalalas);
+
+  assert.equal(shippingHalalas, 2500);
+  assert.equal(
+    calculateOrderTotalHalalas({
+      subtotalHalalas,
+      vatHalalas,
+      shippingHalalas,
+    }),
+    23200,
   );
 });
 
@@ -143,6 +175,18 @@ test("COD placement migration reserves inventory and uses product VAT rates", ()
   );
   assert.match(migration, /'reservation'/);
   assert.match(migration, /grant execute on function public\.place_cod_order/);
+});
+
+test("COD delivery fee migration stores server calculated shipping", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260611103203_add_cod_delivery_fee_rules.sql",
+  );
+
+  assert.match(migration, /v_shipping := case/);
+  assert.match(migration, /when v_subtotal >= 25000 then 0/);
+  assert.match(migration, /else 2500/);
+  assert.match(migration, /v_total := v_subtotal \+ v_vat \+ v_shipping;/);
+  assert.match(migration, /'shippingHalalas', v_shipping/);
 });
 
 test("admin status transition migration enforces order flow and releases inventory on cancellation", () => {
