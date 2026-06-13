@@ -6,16 +6,26 @@ import { notFound } from "next/navigation";
 
 import { QuickAddButton } from "@/components/storefront/quick-add-button";
 import { FavoriteProductButton } from "@/components/storefront/favorite-product-button";
+import { ProductReviews } from "@/components/storefront/product-reviews";
 import { SiteHeader } from "@/components/storefront/site-header";
 import { getCurrentProfile } from "@/lib/admin/auth";
 import { getFavoriteProductSlugs } from "@/lib/customer/account";
 import { calculateDiscountPercent, formatSar } from "@/lib/money";
 import { getProductBySlug } from "@/lib/products/queries";
+import {
+  getCustomerReviewState,
+  listPublishedProductReviews,
+} from "@/lib/products/reviews";
+
+type ProductDetailSearchParams = {
+  review?: string | string[];
+};
 
 type ProductDetailPageProps = {
   params: Promise<{
     slug: string;
   }>;
+  searchParams?: Promise<ProductDetailSearchParams>;
 };
 
 export async function generateMetadata({
@@ -40,8 +50,10 @@ export async function generateMetadata({
 
 export default async function ProductDetailPage({
   params,
+  searchParams,
 }: ProductDetailPageProps) {
   const { slug } = await params;
+  const query: ProductDetailSearchParams = searchParams ? await searchParams : {};
   const [product, profile] = await Promise.all([
     getProductBySlug(slug),
     getCurrentProfile(),
@@ -63,6 +75,13 @@ export default async function ProductDetailPage({
     ? await getFavoriteProductSlugs(profile.userId)
     : new Set<string>();
   const returnTo = `/products/${product.slug}`;
+  const [reviews, reviewState] = await Promise.all([
+    listPublishedProductReviews(product.slug),
+    getCustomerReviewState({
+      productSlug: product.slug,
+      userId: profile?.role === "customer" ? profile.userId : undefined,
+    }),
+  ]);
 
   return (
     <>
@@ -197,7 +216,21 @@ export default async function ProductDetailPage({
             </div>
           </div>
         </section>
+        <ProductReviews
+          productSlug={product.slug}
+          productTitle={product.title}
+          rating={product.rating}
+          reviewCount={product.reviews}
+          reviews={reviews}
+          customerState={reviewState}
+          status={getSingleParam(query.review)}
+          isSignedInCustomer={profile?.role === "customer"}
+        />
       </main>
     </>
   );
+}
+
+function getSingleParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }

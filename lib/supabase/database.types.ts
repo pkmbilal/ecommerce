@@ -415,6 +415,56 @@ export type Database = {
           },
         ];
       };
+      product_reviews: {
+        Row: {
+          body: string | null;
+          created_at: string;
+          id: string;
+          order_item_id: string;
+          product_id: string;
+          profile_id: string;
+          rating: number;
+          status: Database["public"]["Enums"]["product_review_status"];
+          title: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          body?: string | null;
+          created_at?: string;
+          id?: string;
+          order_item_id: string;
+          product_id: string;
+          profile_id: string;
+          rating: number;
+          status?: Database["public"]["Enums"]["product_review_status"];
+          title?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_reviews"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: false;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_reviews_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_reviews_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -528,6 +578,7 @@ export type Database = {
         | "out_for_delivery"
         | "delivered"
         | "cancelled";
+      product_review_status: "published" | "hidden";
     };
     CompositeTypes: Record<string, never>;
   };

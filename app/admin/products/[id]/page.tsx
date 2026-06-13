@@ -8,6 +8,7 @@ import {
   getAdminProductDetail,
   listAdminCategories,
 } from "@/lib/admin/catalog";
+import { listAdminProductReviews } from "@/lib/products/reviews";
 
 export const metadata: Metadata = {
   title: "Edit Product | SAHA Admin",
@@ -30,9 +31,10 @@ export default async function EditProductPage({
   const profile = await requireAdminSession();
 
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const [product, categories] = await Promise.all([
+  const [product, categories, reviews] = await Promise.all([
     getAdminProductDetail(id),
     listAdminCategories(),
+    listAdminProductReviews(id),
   ]);
 
   if (!product) {
@@ -49,6 +51,7 @@ export default async function EditProductPage({
         action={`/api/admin/products/${product.id}`}
         categories={categories}
         product={product}
+        reviews={reviews}
         error={getSingleParam(query.error)}
         saved={getSingleParam(query.saved) === "1"}
         mode="update"
