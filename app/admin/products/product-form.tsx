@@ -5,11 +5,13 @@ import type {
 import { ConfirmSubmitButton } from "@/app/admin/products/confirm-submit-button";
 import { AdminPanel } from "@/components/admin/tailadmin/primitives";
 import { ProductFormDraft } from "@/app/admin/products/product-form-draft";
+import type { AdminProductReview } from "@/lib/products/reviews";
 
 type ProductFormProps = {
   action: string;
   categories: AdminCategory[];
   product?: AdminProductDetail;
+  reviews?: AdminProductReview[];
   error?: string;
   saved?: boolean;
   mode: "create" | "update";
@@ -19,6 +21,7 @@ export function ProductForm({
   action,
   categories,
   product,
+  reviews = [],
   error,
   saved,
   mode,
@@ -220,6 +223,56 @@ export function ProductForm({
                 Adjust stock
               </button>
             </form>
+          </AdminPanel>
+        ) : null}
+
+        {product ? (
+          <AdminPanel title="Customer reviews" className="p-5">
+            {reviews.length > 0 ? (
+              <div className="space-y-4">
+                {reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="rounded-lg border border-gray-200 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {review.customerName}
+                        </p>
+                        <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-500">
+                          {review.rating}/5 stars - {review.status}
+                        </p>
+                      </div>
+                      {review.status === "published" ? (
+                        <form action={action} method="post">
+                          <input type="hidden" name="intent" value="hide-review" />
+                          <input type="hidden" name="reviewId" value={review.id} />
+                          <button
+                            type="submit"
+                            className="h-9 rounded-lg border border-error-200 bg-white px-3 text-xs font-semibold text-error-700 hover:bg-error-50"
+                          >
+                            Hide
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                    <p className="mt-3 text-sm font-semibold text-gray-900">
+                      {review.title ?? "Customer review"}
+                    </p>
+                    {review.body ? (
+                      <p className="mt-2 text-sm leading-6 text-gray-500">
+                        {review.body}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm leading-6 text-gray-500">
+                This product does not have customer reviews yet.
+              </p>
+            )}
           </AdminPanel>
         ) : null}
 

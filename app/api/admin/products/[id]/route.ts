@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { hasAdminSession } from "@/lib/admin/auth";
 import {
   archiveAdminProduct,
+  getAdminProductDetail,
   parseProductFormData,
   setAdminProductActive,
   updateAdminProduct,
 } from "@/lib/admin/catalog";
+import { hideAdminProductReview } from "@/lib/products/reviews";
 import {
   checkRateLimit,
   rateLimitedRedirect,
@@ -65,6 +67,18 @@ export async function POST(
       );
     }
 
+    if (intent === "hide-review") {
+      const reviewId = requireText(formData, "reviewId");
+      await hideAdminProductReview({ productId: id, reviewId });
+      const product = await getAdminProductDetail(id);
+      revalidateProductPaths({ id, slug: product?.slug ?? id });
+
+      return NextResponse.redirect(
+        new URL(`/admin/products/${id}?saved=1`, request.url),
+        { status: 303 },
+      );
+    }
+
     const input = await parseProductFormData(formData, "update");
     await updateAdminProduct(id, input);
     revalidateProductPaths({ id, slug: input.slug });
@@ -101,6 +115,16 @@ function parseBooleanFormField(formData: FormData, name: string) {
   }
 
   throw new Error("Invalid product status action.");
+}
+
+function requireText(formData: FormData, name: string) {
+  const value = formData.get(name);
+
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${name} is required.`);
+  }
+
+  return value.trim();
 }
 
 function revalidateProductPaths({ id, slug }: { id: string; slug: string }) {

@@ -27,6 +27,9 @@ const {
   validateProductImageFile,
 } = require("../lib/media/product-image-files.ts");
 const {
+  validateProductReviewForm,
+} = require("../lib/products/review-validation.ts");
+const {
   checkRateLimit,
   resetRateLimitForTests,
 } = require("../lib/security/rate-limit.ts");
@@ -414,6 +417,32 @@ test("validates admin product image files", () => {
   );
 });
 
+test("validates customer product review forms", () => {
+  const validForm = new FormData();
+  validForm.set("rating", "5");
+  validForm.set("title", "  Excellent quality  ");
+  validForm.set("body", "  Packaging and fit were both strong.  ");
+
+  const validResult = validateProductReviewForm(validForm);
+
+  assert.equal(validResult.success, true);
+
+  if (validResult.success) {
+    assert.equal(validResult.data.rating, 5);
+    assert.equal(validResult.data.title, "Excellent quality");
+    assert.equal(validResult.data.body, "Packaging and fit were both strong.");
+  }
+
+  const invalidForm = new FormData();
+  invalidForm.set("rating", "6");
+  invalidForm.set("title", "A");
+
+  assert.deepEqual(validateProductReviewForm(invalidForm), {
+    success: false,
+    error: "Choose a rating from 1 to 5 stars.",
+  });
+});
+
 test("rate limiter blocks repeated requests per subject and client IP", () => {
   resetRateLimitForTests();
 
@@ -484,6 +513,51 @@ test("customer dashboard migration adds owned addresses favorites and linked ord
   assert.match(migration, /Users can read own orders/);
   assert.match(migration, /v_profile_id uuid := nullif\(trim\(payload->>'profile_id'\), ''\)::uuid/);
   assert.match(migration, /profile_id,\s+customer_id,/);
+});
+
+test("product review migration gates reviews to progressed customer orders", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260613120000_add_product_customer_reviews.sql",
+  );
+
+  assert.match(migration, /create table public\.product_reviews/);
+  assert.match(migration, /rating integer not null/);
+  assert.match(migration, /rating between 1 and 5/);
+  assert.match(migration, /unique \(profile_id, product_id\)/);
+  assert.match(migration, /Review ownership fields cannot be changed/);
+  assert.match(
+    migration,
+    /o\.status in \('confirmed', 'out_for_delivery', 'delivered'\)/,
+  );
+  assert.doesNotMatch(migration, /o\.status in \('pending_confirmation'/);
+  assert.doesNotMatch(migration, /o\.status in \('cancelled'/);
+  assert.match(migration, /create trigger product_reviews_recalculate_product_summary/);
+  assert.match(migration, /status = 'published'/);
+  assert.match(migration, /update public\.products\s+set rating = 0,\s+review_count = 0;/);
+});
+
+test("product review advisor fixes harden function access and RLS policies", () => {
+  const migration = readMigration(
+    "supabase/migrations/20260613123000_harden_product_reviews_advisor_fixes.sql",
+  );
+
+  assert.match(migration, /set search_path = public/);
+  assert.match(
+    migration,
+    /revoke execute on function public\.recalculate_product_review_summary\(uuid\)\s+from public, anon, authenticated;/,
+  );
+  assert.match(
+    migration,
+    /drop policy if exists "Public can read published product reviews"/,
+  );
+  assert.match(
+    migration,
+    /create policy "Authenticated can read permitted product reviews"/,
+  );
+  assert.match(
+    migration,
+    /create policy "Authenticated can update permitted product reviews"/,
+  );
 });
 
 function readMigration(relativePath) {
