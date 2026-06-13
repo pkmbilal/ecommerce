@@ -9,22 +9,19 @@ import {
 } from "@/lib/supabase/server";
 
 import type { ProductReviewInput } from "./review-validation";
+import type {
+  CustomerReviewState,
+  ProductReview,
+  ProductReviewSectionData,
+} from "./review-types";
+
+export type {
+  CustomerReviewState,
+  ProductReview,
+  ProductReviewSectionData,
+} from "./review-types";
 
 export type ProductReviewStatus = Enums<"product_review_status">;
-
-export type ProductReview = {
-  id: string;
-  rating: number;
-  title?: string;
-  body?: string;
-  authorName: string;
-  createdAt: string;
-};
-
-export type CustomerReviewState = {
-  canReview: boolean;
-  existingReview?: ProductReview;
-};
 
 export type AdminProductReview = ProductReview & {
   status: ProductReviewStatus;
@@ -135,6 +132,27 @@ export async function getCustomerReviewState({
     existingReview: reviewData
       ? mapProductReview(reviewData as unknown as ProductReviewRow)
       : undefined,
+  };
+}
+
+export async function getProductReviewSectionData({
+  productSlug,
+  userId,
+}: {
+  productSlug: string;
+  userId?: string;
+}): Promise<ProductReviewSectionData> {
+  const [summary, reviews, customerState] = await Promise.all([
+    getProductReviewSummary(productSlug),
+    listPublishedProductReviews(productSlug),
+    getCustomerReviewState({ productSlug, userId }),
+  ]);
+
+  return {
+    rating: summary.rating,
+    reviewCount: summary.reviewCount,
+    reviews,
+    customerState,
   };
 }
 
@@ -263,6 +281,29 @@ async function getActiveProductIdBySlug(slug: string): Promise<ProductIdRow | nu
   }
 
   return data as ProductIdRow | null;
+}
+
+async function getProductReviewSummary(productSlug: string) {
+  if (!getSupabasePublicEnv()) {
+    return { rating: 0, reviewCount: 0 };
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("rating, review_count")
+    .eq("slug", productSlug)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load product review summary: ${error.message}`);
+  }
+
+  return {
+    rating: data?.rating ?? 0,
+    reviewCount: data?.review_count ?? 0,
+  };
 }
 
 async function getEligibleOrderItemForReview({
